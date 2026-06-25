@@ -36,8 +36,10 @@ export interface Accommodation {
   distanceKm: string | null;
   extraCosts: Record<string, string> | null;
   isAvailable: boolean;
+  status?: string;
   images?: AccommodationImage[];
   amenities?: Amenity[];
+  landlord?: { id: string; fullName: string; phone: string | null };
 }
 
 export interface Paginated<T> {

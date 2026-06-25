@@ -30,6 +30,14 @@ export function Header() {
           >
             Tìm phòng
           </Link>
+          {!loading && user?.role === 'LANDLORD' && (
+            <Link
+              href="/landlord"
+              className="rounded-lg px-3 py-1.5 text-slate-600 transition hover:bg-slate-100 hover:text-brand"
+            >
+              Cho thuê
+            </Link>
+          )}
           {!loading && user?.role === 'ADMIN' && (
             <Link
               href="/admin"

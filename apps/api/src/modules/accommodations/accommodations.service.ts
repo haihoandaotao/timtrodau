@@ -105,14 +105,22 @@ export class AccommodationsService {
     };
   }
 
-  /** DAL-9: chi tiết phòng PUBLISHED. 404 nếu không tồn tại/chưa duyệt/đã xóa. */
+  /**
+   * DAL-9: chi tiết phòng PUBLISHED. 404 nếu không tồn tại/chưa duyệt/đã xóa.
+   * Trả kèm thông tin LIÊN HỆ chủ trọ (tên + SĐT) cho người thuê; KHÔNG lộ
+   * CCCD (landlord_profile không được join) và password_hash bị loại bỏ.
+   */
   async findPublicById(id: string): Promise<Accommodation> {
     const acc = await this.accRepo.findOne({
       where: { id, status: AccommodationStatus.PUBLISHED },
-      relations: { images: true, area: true, amenities: true },
+      relations: { images: true, area: true, amenities: true, landlord: true },
     });
     if (!acc) {
       throw new NotFoundException('Không tìm thấy phòng');
+    }
+    if (acc.landlord) {
+      // Loại field nhạy cảm; chỉ để lộ tên + SĐT liên hệ cho người thuê.
+      acc.landlord.passwordHash = null;
     }
     return acc;
   }

@@ -22,7 +22,11 @@ describe('AuthService', () => {
     create: jest.fn((x) => x),
     save: jest.fn(async (x) => x),
   };
-  const admissionRepo = { findOne: jest.fn() };
+  const admissionRepo = {
+    findOne: jest.fn(),
+    create: jest.fn((x) => x),
+    save: jest.fn(async (x) => ({ id: '1', ...x })),
+  };
   const studentRecordRepo = { findOne: jest.fn() };
   const usersService = {
     findByPhone: jest.fn(),
@@ -141,37 +145,62 @@ describe('AuthService', () => {
   });
 
   describe('prospectiveLogin (Tân SV)', () => {
-    it('Happy: SBD + mật khẩu đúng → tạo SV PROSPECTIVE + ngành dự kiến', async () => {
+    it('Happy: email + ngày sinh đúng → SV PROSPECTIVE + ngành dự kiến', async () => {
       admissionRepo.findOne.mockResolvedValue({
-        sbd: 'DDN2025001',
+        email: 'tansinh@x.vn',
+        phone: '0931000001',
         fullName: 'Trần Tân Sinh',
-        passwordHash: await bcrypt.hash('ThiSinh@123', 10),
+        dateOfBirth: '2007-05-12',
+        intendedMajor: 'Kiến trúc',
       });
       userRepo.findOne.mockResolvedValue(null);
 
-      const res = await service.prospectiveLogin({
-        sbd: 'DDN2025001',
-        password: 'ThiSinh@123',
-        intendedMajor: 'Kiến trúc',
-      });
+      const res = await service.prospectiveLogin({ identifier: 'tansinh@x.vn', dob: '2007-05-12' });
 
       expect(res.user.role).toBe(UserRole.STUDENT);
       expect(res.tokens.accessToken).toBeTruthy();
-      // student_profile được lưu với type PROSPECTIVE
       const saved = studentProfileRepo.save.mock.calls[0][0];
       expect(saved.studentType).toBe(StudentType.PROSPECTIVE);
       expect(saved.intendedMajor).toBe('Kiến trúc');
     });
 
-    it('Error: sai mật khẩu → Unauthorized', async () => {
+    it('Error: sai ngày sinh → Unauthorized', async () => {
       admissionRepo.findOne.mockResolvedValue({
-        sbd: 'DDN2025001',
+        email: 'tansinh@x.vn',
         fullName: 'X',
-        passwordHash: await bcrypt.hash('khac', 10),
+        dateOfBirth: '2007-05-12',
       });
       await expect(
-        service.prospectiveLogin({ sbd: 'DDN2025001', password: 'sai', intendedMajor: 'A' }),
+        service.prospectiveLogin({ identifier: 'tansinh@x.vn', dob: '2000-01-01' }),
       ).rejects.toBeInstanceOf(UnauthorizedException);
+    });
+  });
+
+  describe('prospectiveRegister (tự đăng ký)', () => {
+    it('Happy: chưa tồn tại → tạo candidate + đăng nhập', async () => {
+      admissionRepo.findOne.mockResolvedValue(null);
+      userRepo.findOne.mockResolvedValue(null);
+
+      const res = await service.prospectiveRegister({
+        fullName: 'Nguyễn Thí Sinh',
+        email: 'moi@x.vn',
+        dob: '2007-01-01',
+        intendedMajor: 'Kiến trúc',
+      });
+      expect(res.user.role).toBe(UserRole.STUDENT);
+      expect(admissionRepo.save).toHaveBeenCalled();
+    });
+
+    it('Error: email đã tồn tại → Conflict', async () => {
+      admissionRepo.findOne.mockResolvedValue({ id: '1', email: 'moi@x.vn' });
+      await expect(
+        service.prospectiveRegister({
+          fullName: 'X',
+          email: 'moi@x.vn',
+          dob: '2007-01-01',
+          intendedMajor: 'A',
+        }),
+      ).rejects.toBeInstanceOf(ConflictException);
     });
   });
 

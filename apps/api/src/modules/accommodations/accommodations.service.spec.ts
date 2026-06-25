@@ -94,7 +94,7 @@ describe('AccommodationsService', () => {
       // T9-I1: chỉ join images/area/amenities — KHÔNG join landlord_profile (không lộ CCCD)
       expect(accRepo.findOne).toHaveBeenCalledWith({
         where: { id: '1', status: AccommodationStatus.PUBLISHED },
-        relations: { images: true, area: true, amenities: true },
+        relations: { images: true, area: true, amenities: true, landlord: true },
       });
     });
 

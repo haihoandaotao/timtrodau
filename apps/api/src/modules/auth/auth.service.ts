@@ -23,6 +23,7 @@ import { OtpRequest } from './entities/otp-request.entity';
 import { LandlordRegisterDto } from './dto/landlord-register.dto';
 import { LoginDto } from './dto/login.dto';
 import { ProspectiveLoginDto } from './dto/prospective-login.dto';
+import { ProspectiveRegisterDto } from './dto/prospective-register.dto';
 import { RequestOtpDto } from './dto/request-otp.dto';
 import { StudentLoginDto } from './dto/student-login.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
@@ -62,19 +63,52 @@ export class AuthService {
 
   // ---------- SV: đăng nhập theo đối tượng (mock hệ thống ngoài) ----------
 
-  /** Tân sinh viên: xác thực tài khoản thí sinh (SBD + mật khẩu) + ngành dự kiến. */
+  /** Tân sinh viên: đăng nhập bằng email/SĐT + ngày sinh (mật khẩu). */
   async prospectiveLogin(
     dto: ProspectiveLoginDto,
   ): Promise<{ tokens: AuthTokens; user: SafeUser }> {
-    const cand = await this.admissionRepo.findOne({ where: { sbd: dto.sbd } });
-    if (!cand || !(await bcrypt.compare(dto.password, cand.passwordHash))) {
-      throw new UnauthorizedException('Sai số báo danh hoặc mật khẩu thí sinh');
-    }
-    const user = await this.upsertStudent(dto.sbd, cand.fullName, {
-      studentType: StudentType.PROSPECTIVE,
-      intendedMajor: dto.intendedMajor,
-      major: dto.intendedMajor,
+    const cand = await this.admissionRepo.findOne({
+      where: [{ email: dto.identifier }, { phone: dto.identifier }],
     });
+    const candDob = cand ? String(cand.dateOfBirth).slice(0, 10) : null;
+    if (!cand || candDob !== dto.dob) {
+      throw new UnauthorizedException('Sai email/SĐT hoặc ngày sinh');
+    }
+    const user = await this.upsertStudent({ email: cand.email, phone: cand.phone }, cand.fullName, {
+      studentType: StudentType.PROSPECTIVE,
+      intendedMajor: cand.intendedMajor ?? undefined,
+    });
+    return { tokens: await this.buildTokens(user), user: this.sanitize(user) };
+  }
+
+  /** Thí sinh tự đăng ký (chưa có trong hệ thống tuyển sinh) → đăng nhập luôn. */
+  async prospectiveRegister(
+    dto: ProspectiveRegisterDto,
+  ): Promise<{ tokens: AuthTokens; user: SafeUser }> {
+    const dup = await this.admissionRepo.findOne({
+      where: [
+        ...(dto.email ? [{ email: dto.email }] : []),
+        ...(dto.phone ? [{ phone: dto.phone }] : []),
+      ],
+    });
+    if (dup) {
+      throw new ConflictException('Email hoặc SĐT đã được đăng ký');
+    }
+    await this.admissionRepo.save(
+      this.admissionRepo.create({
+        fullName: dto.fullName,
+        email: dto.email ?? null,
+        phone: dto.phone ?? null,
+        dateOfBirth: dto.dob,
+        intendedMajor: dto.intendedMajor,
+        isSelfRegistered: true,
+      }),
+    );
+    const user = await this.upsertStudent(
+      { email: dto.email ?? null, phone: dto.phone ?? null },
+      dto.fullName,
+      { studentType: StudentType.PROSPECTIVE, intendedMajor: dto.intendedMajor },
+    );
     return { tokens: await this.buildTokens(user), user: this.sanitize(user) };
   }
 
@@ -87,29 +121,42 @@ export class AuthService {
     if (!rec || recDob !== dto.dob) {
       throw new UnauthorizedException('Sai mã sinh viên hoặc ngày sinh');
     }
-    const user = await this.upsertStudent(rec.studentCode, rec.fullName, {
+    const user = await this.upsertStudent({ studentCode: rec.studentCode }, rec.fullName, {
       studentType: StudentType.CURRENT,
       major: rec.major ?? undefined,
     });
     return { tokens: await this.buildTokens(user), user: this.sanitize(user) };
   }
 
-  /** Tạo/cập nhật user SV + student_profile từ dữ liệu hệ thống ngoài. */
+  /** Tạo/cập nhật user SV + student_profile, định danh theo MSSV/email/SĐT. */
   private async upsertStudent(
-    studentCode: string,
+    identity: { studentCode?: string | null; email?: string | null; phone?: string | null },
     fullName: string,
     profile: { studentType: StudentType; major?: string; intendedMajor?: string },
   ): Promise<User> {
-    let user = await this.userRepo.findOne({ where: { studentCode } });
+    let user: User | null = null;
+    if (identity.studentCode) {
+      user = await this.userRepo.findOne({ where: { studentCode: identity.studentCode } });
+    }
+    if (!user && identity.email) {
+      user = await this.userRepo.findOne({ where: { email: identity.email } });
+    }
+    if (!user && identity.phone) {
+      user = await this.userRepo.findOne({ where: { phone: identity.phone } });
+    }
     if (!user) {
       user = this.userRepo.create({
-        studentCode,
+        studentCode: identity.studentCode ?? null,
+        email: identity.email ?? null,
+        phone: identity.phone ?? null,
         fullName,
         role: UserRole.STUDENT,
         status: UserStatus.ACTIVE,
       });
     } else {
       user.fullName = fullName;
+      if (identity.email) user.email = identity.email;
+      if (identity.phone) user.phone = identity.phone;
     }
     user = await this.userRepo.save(user);
 

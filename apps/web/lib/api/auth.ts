@@ -22,12 +22,35 @@ export interface LoginResult {
   user: AuthUser;
 }
 
+export interface ProspectiveRegisterPayload {
+  fullName: string;
+  email?: string;
+  phone?: string;
+  dob: string;
+  intendedMajor: string;
+}
+
+export interface LandlordRegisterPayload {
+  fullName: string;
+  phone: string;
+  password: string;
+  idCardNo: string;
+  address: string;
+}
+
 export const authApi = {
-  /** Tân sinh viên: tài khoản thí sinh tuyển sinh + ngành dự kiến. */
-  prospectiveLogin: (sbd: string, password: string, intendedMajor: string) =>
+  /** Tân sinh viên: email hoặc SĐT + ngày sinh (mật khẩu). */
+  prospectiveLogin: (identifier: string, dob: string) =>
     apiFetch<LoginResult>('/auth/prospective/login', {
       method: 'POST',
-      body: JSON.stringify({ sbd, password, intendedMajor }),
+      body: JSON.stringify({ identifier, dob }),
+    }),
+
+  /** Thí sinh tự đăng ký → đăng nhập luôn. */
+  prospectiveRegister: (payload: ProspectiveRegisterPayload) =>
+    apiFetch<LoginResult>('/auth/prospective/register', {
+      method: 'POST',
+      body: JSON.stringify(payload),
     }),
 
   /** Sinh viên trường: MSSV + ngày sinh (yyyy-mm-dd). */
@@ -44,6 +67,23 @@ export const authApi = {
       body: JSON.stringify({ phone, password }),
     }),
 
+  /** Đăng ký tài khoản chủ trọ (chờ duyệt). */
+  landlordRegister: (payload: LandlordRegisterPayload) =>
+    apiFetch<{ id: string; status: string }>('/auth/landlord/register', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
   me: (token: string) =>
     apiFetch<AuthUser>('/auth/me', { headers: { Authorization: `Bearer ${token}` } }),
+};
+
+export interface Major {
+  id: number;
+  name: string;
+  isActive: boolean;
+}
+
+export const majorsApi = {
+  listActive: () => apiFetch<Major[]>('/majors'),
 };

@@ -27,6 +27,21 @@ export default function ModerationPage() {
     }
   };
 
+  // Duyệt chủ trọ
+  const landlords = useQuery({
+    queryKey: ['admin', 'pending-landlords'],
+    queryFn: adminApi.pendingLandlords,
+  });
+  const llMutation = useMutation({
+    mutationFn: ({ userId, action, reason }: { userId: string; action: 'APPROVE' | 'REJECT'; reason?: string }) =>
+      adminApi.moderateLandlord(userId, action, reason, action === 'APPROVE'),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'pending-landlords'] }),
+  });
+  const rejectLandlord = (userId: string) => {
+    const reason = window.prompt('Lý do từ chối chủ trọ (bắt buộc):');
+    if (reason && reason.trim()) llMutation.mutate({ userId, action: 'REJECT', reason: reason.trim() });
+  };
+
   return (
     <main className="mx-auto max-w-3xl px-4 py-6">
       <div className="mb-4 flex items-center justify-between">
@@ -35,6 +50,33 @@ export default function ModerationPage() {
           ← Dashboard
         </Link>
       </div>
+
+      {/* Duyệt chủ trọ chờ xác minh */}
+      {landlords.data && landlords.data.length > 0 && (
+        <section className="mb-6">
+          <h2 className="mb-2 text-sm font-semibold uppercase text-slate-400">Chủ trọ chờ xác minh</h2>
+          <div className="space-y-2">
+            {landlords.data.map((l) => (
+              <div key={l.userId} className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+                <div className="min-w-0">
+                  <p className="truncate font-semibold text-slate-800">{l.user?.fullName ?? 'Chủ trọ'}</p>
+                  <p className="truncate text-xs text-slate-500">{l.user?.phone} · {l.address}</p>
+                </div>
+                <div className="flex shrink-0 gap-2">
+                  <button type="button" onClick={() => llMutation.mutate({ userId: l.userId, action: 'APPROVE' })} className="rounded-lg bg-green-600 px-3 py-1 text-xs font-semibold text-white">
+                    Duyệt
+                  </button>
+                  <button type="button" onClick={() => rejectLandlord(l.userId)} className="rounded-lg bg-red-500 px-3 py-1 text-xs font-semibold text-white">
+                    Từ chối
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      <h2 className="mb-2 text-sm font-semibold uppercase text-slate-400">Bài đăng chờ duyệt</h2>
 
       {isLoading && <p className="text-slate-500">Đang tải…</p>}
       {isError && (

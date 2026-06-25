@@ -46,4 +46,68 @@ export const adminApi = {
       headers: authHeaders(),
       body: JSON.stringify({ action, reason }),
     }),
+  pendingLandlords: () =>
+    apiFetch<PendingLandlord[]>('/admin/moderation/landlords', { headers: authHeaders() }),
+  moderateLandlord: (userId: string, action: 'APPROVE' | 'REJECT', reason?: string, isTrusted?: boolean) =>
+    apiFetch<unknown>(`/admin/moderation/landlords/${userId}`, {
+      method: 'PATCH',
+      headers: authHeaders(),
+      body: JSON.stringify({ action, reason, isTrusted }),
+    }),
+
+  // Users (quản lý người dùng)
+  users: (role?: string, page = 1) =>
+    apiFetch<Paginated<AdminUser>>(
+      `/admin/users?${role ? `role=${role}&` : ''}page=${page}`,
+      { headers: authHeaders() },
+    ),
+  setUserStatus: (id: string, status: 'ACTIVE' | 'BLOCKED') =>
+    apiFetch<AdminUser>(`/admin/users/${id}/status`, {
+      method: 'PATCH',
+      headers: authHeaders(),
+      body: JSON.stringify({ status }),
+    }),
+
+  // Majors (cấu hình ngành)
+  majors: () => apiFetch<AdminMajor[]>('/admin/majors', { headers: authHeaders() }),
+  createMajor: (name: string) =>
+    apiFetch<AdminMajor>('/admin/majors', {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ name }),
+    }),
+  updateMajor: (id: number, data: { name?: string; isActive?: boolean }) =>
+    apiFetch<AdminMajor>(`/admin/majors/${id}`, {
+      method: 'PATCH',
+      headers: authHeaders(),
+      body: JSON.stringify(data),
+    }),
+  deleteMajor: (id: number) =>
+    apiFetch<void>(`/admin/majors/${id}`, { method: 'DELETE', headers: authHeaders() }),
 };
+
+export interface Paginated<T> {
+  data: T[];
+  meta: { total: number; page: number; limit: number; totalPages: number };
+}
+export interface AdminUser {
+  id: string;
+  fullName: string;
+  phone: string | null;
+  email: string | null;
+  studentCode: string | null;
+  role: 'STUDENT' | 'LANDLORD' | 'ADMIN';
+  status: 'ACTIVE' | 'PENDING' | 'BLOCKED';
+}
+export interface AdminMajor {
+  id: number;
+  name: string;
+  isActive: boolean;
+}
+export interface PendingLandlord {
+  userId: string;
+  idCardNo: string;
+  address: string;
+  verifyStatus: string;
+  user?: { fullName: string; phone: string | null };
+}

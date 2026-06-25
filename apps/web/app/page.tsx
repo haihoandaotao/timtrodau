@@ -3,12 +3,15 @@
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import Link from 'next/link';
 import { publicStatsApi } from '@/lib/api/public-stats';
+import { useAuth } from '@/lib/auth-context';
 import { RoomCard } from '@/components/RoomCard';
 import { BarRow, LinkButton, Section, StatCard } from '@/components/ui';
 
 export default function HomePage() {
   const router = useRouter();
+  const { user } = useAuth();
   const [q, setQ] = useState('');
 
   const overview = useQuery({ queryKey: ['pub', 'overview'], queryFn: publicStatsApi.overview });
@@ -50,6 +53,16 @@ export default function HomePage() {
               Tìm ngay
             </button>
           </form>
+          {!user && (
+            <div className="mt-4 flex flex-wrap gap-3 text-sm">
+              <Link href="/register/student" className="rounded-lg bg-white/15 px-4 py-2 font-medium text-white ring-1 ring-white/30 transition hover:bg-white/25">
+                🎓 Đăng ký tân sinh viên
+              </Link>
+              <Link href="/register/landlord" className="rounded-lg bg-white/15 px-4 py-2 font-medium text-white ring-1 ring-white/30 transition hover:bg-white/25">
+                🏠 Đăng ký chủ trọ
+              </Link>
+            </div>
+          )}
         </div>
         <div className="pointer-events-none absolute -right-10 -top-10 h-48 w-48 rounded-full bg-white/10" />
         <div className="pointer-events-none absolute -bottom-16 right-16 h-56 w-56 rounded-full bg-white/5" />
@@ -63,21 +76,32 @@ export default function HomePage() {
         <StatCard label="Lượt đăng ký giữ chỗ" value={overview.data?.totalRegistrations ?? '—'} icon="✅" />
       </div>
 
-      {/* PHÒNG NỔI BẬT */}
-      <Section
-        title="Phòng nổi bật"
-        action={<LinkButton href="/search" variant="ghost">Xem tất cả →</LinkButton>}
-      >
-        {featured.isLoading && <p className="text-slate-500">Đang tải…</p>}
-        {featured.data && featured.data.length === 0 && (
-          <p className="text-slate-500">Chưa có phòng nào.</p>
-        )}
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-          {featured.data?.map((room) => (
-            <RoomCard key={room.id} room={room} />
-          ))}
+      {/* PHÒNG NỔI BẬT — chỉ hiện khi đã đăng nhập */}
+      {user ? (
+        <Section
+          title="Phòng nổi bật"
+          action={<LinkButton href="/search" variant="ghost">Xem tất cả →</LinkButton>}
+        >
+          {featured.isLoading && <p className="text-slate-500">Đang tải…</p>}
+          {featured.data && featured.data.length === 0 && (
+            <p className="text-slate-500">Chưa có phòng nào.</p>
+          )}
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+            {featured.data?.map((room) => (
+              <RoomCard key={room.id} room={room} />
+            ))}
+          </div>
+        </Section>
+      ) : (
+        <div className="mt-6 rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-center">
+          <p className="text-slate-600">
+            🔒 <strong>Đăng nhập</strong> để xem danh sách phòng nổi bật và đăng ký giữ chỗ.
+          </p>
+          <LinkButton href="/login" className="mt-3" variant="primary">
+            Đăng nhập / Đăng ký
+          </LinkButton>
         </div>
-      </Section>
+      )}
 
       {/* BIỂU ĐỒ PHÂN BỐ */}
       <div className="mt-8 grid gap-4 sm:grid-cols-2">

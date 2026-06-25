@@ -49,21 +49,53 @@ async function run() {
     }
   }
 
-  // --- Mock thí sinh tuyển sinh (tân SV: SBD + mật khẩu) ---
-  const candPass = process.env.SEED_CANDIDATE_PASSWORD ?? 'ThiSinh@123';
-  const candHash = await bcrypt.hash(candPass, 10);
-  const CANDIDATES: Array<{ sbd: string; name: string }> = [
-    { sbd: 'DDN2025001', name: 'Trần Tân Sinh' },
-    { sbd: 'DDN2025002', name: 'Lê Dự Bị' },
+  // --- Danh sách ngành (admin cấu hình; tân SV chọn) ---
+  const MAJORS = [
+    'Kiến trúc',
+    'Quy hoạch vùng và đô thị',
+    'Kỹ thuật xây dựng',
+    'Thiết kế nội thất',
+    'Mỹ thuật đô thị',
+    'Công nghệ thông tin',
+  ];
+  for (const m of MAJORS) {
+    const exists = await ds.query('SELECT id FROM majors WHERE name = ? LIMIT 1', [m]);
+    if (!exists.length) {
+      await ds.query('INSERT INTO majors (name, is_active) VALUES (?, 1)', [m]);
+    }
+  }
+
+  // --- Mock thí sinh tuyển sinh (tân SV: email/SĐT + ngày sinh) ---
+  const CANDIDATES: Array<{
+    name: string;
+    email: string;
+    phone: string;
+    dob: string;
+    major: string;
+  }> = [
+    {
+      name: 'Trần Tân Sinh',
+      email: 'tansinh@thisinh.dau.edu.vn',
+      phone: '0931000001',
+      dob: '2007-05-12',
+      major: 'Kiến trúc',
+    },
+    {
+      name: 'Lê Dự Bị',
+      email: 'dubi@thisinh.dau.edu.vn',
+      phone: '0931000002',
+      dob: '2007-09-20',
+      major: 'Thiết kế nội thất',
+    },
   ];
   for (const c of CANDIDATES) {
-    const exists = await ds.query('SELECT id FROM admission_candidates WHERE sbd = ? LIMIT 1', [
-      c.sbd,
+    const exists = await ds.query('SELECT id FROM admission_candidates WHERE email = ? LIMIT 1', [
+      c.email,
     ]);
     if (!exists.length) {
       await ds.query(
-        'INSERT INTO admission_candidates (sbd, full_name, password_hash) VALUES (?, ?, ?)',
-        [c.sbd, c.name, candHash],
+        'INSERT INTO admission_candidates (full_name, email, phone, date_of_birth, intended_major, is_self_registered) VALUES (?, ?, ?, ?, ?, 0)',
+        [c.name, c.email, c.phone, c.dob, c.major],
       );
     }
   }

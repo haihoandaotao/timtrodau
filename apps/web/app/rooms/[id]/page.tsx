@@ -71,9 +71,22 @@ export default function RoomDetailPage({ params }: { params: { id: string } }) {
         </div>
         <h1 className="text-xl font-bold text-slate-800">{room.title}</h1>
         <p className="text-2xl font-bold text-brand">{formatVnd(room.price)}/tháng</p>
-        <p className="text-sm text-slate-500">{room.address}</p>
+        <p className="text-sm text-slate-500">📍 {room.address}</p>
         {room.description && <p className="text-slate-700">{room.description}</p>}
       </div>
+
+      {/* Liên hệ chủ trọ */}
+      {room.landlord && (
+        <section className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
+          <h2 className="mb-2 text-sm font-semibold uppercase text-slate-400">Liên hệ chủ trọ</h2>
+          <p className="font-medium text-slate-800">{room.landlord.fullName}</p>
+          {room.landlord.phone && (
+            <a href={`tel:${room.landlord.phone}`} className="text-brand hover:underline">
+              📞 {room.landlord.phone}
+            </a>
+          )}
+        </section>
+      )}
 
       {/* Chi phí phát sinh */}
       {room.extraCosts && (

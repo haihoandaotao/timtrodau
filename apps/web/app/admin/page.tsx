@@ -33,12 +33,15 @@ export default function AdminDashboard() {
     <main className="mx-auto max-w-3xl px-4 py-6">
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-xl font-bold text-brand">Dashboard quản trị</h1>
-        <div className="flex gap-2">
-          <Link
-            href="/admin/moderation"
-            className="rounded-lg border border-brand px-3 py-1.5 text-sm text-brand"
-          >
+        <div className="flex flex-wrap gap-2">
+          <Link href="/admin/moderation" className="rounded-lg border border-brand px-3 py-1.5 text-sm text-brand">
             Duyệt tin
+          </Link>
+          <Link href="/admin/users" className="rounded-lg border border-brand px-3 py-1.5 text-sm text-brand">
+            Người dùng
+          </Link>
+          <Link href="/admin/majors" className="rounded-lg border border-brand px-3 py-1.5 text-sm text-brand">
+            Ngành
           </Link>
           <button
             type="button"

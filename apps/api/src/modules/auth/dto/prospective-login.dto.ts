@@ -1,23 +1,16 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { IsString, MaxLength, MinLength } from 'class-validator';
+import { IsString, Matches, MinLength } from 'class-validator';
 
-/** Tân sinh viên: đăng nhập bằng tài khoản thí sinh tuyển sinh + ngành dự kiến. */
+/** Tân sinh viên: đăng nhập bằng email HOẶC SĐT + mật khẩu là ngày sinh. */
 export class ProspectiveLoginDto {
-  @ApiProperty({ example: 'DDN2025001', description: 'Số báo danh (tài khoản tuyển sinh)' })
+  @ApiProperty({ example: 'thisinh@gmail.com', description: 'Email hoặc số điện thoại' })
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   @IsString()
   @MinLength(3)
-  @MaxLength(32)
-  sbd: string;
+  identifier: string;
 
-  @ApiProperty({ example: 'ThiSinh@123', description: 'Mật khẩu tài khoản thí sinh' })
-  @IsString()
-  @MinLength(6)
-  password: string;
-
-  @ApiProperty({ example: 'Kiến trúc', description: 'Ngành dự kiến nhập học' })
-  @IsString()
-  @MaxLength(100)
-  intendedMajor: string;
+  @ApiProperty({ example: '2007-05-12', description: 'Ngày sinh (yyyy-mm-dd) — mật khẩu' })
+  @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'Ngày sinh phải dạng yyyy-mm-dd' })
+  dob: string;
 }

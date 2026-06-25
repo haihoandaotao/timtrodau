@@ -12,6 +12,7 @@ import { AccommodationsModule } from './modules/accommodations/accommodations.mo
 import { AuthModule } from './modules/auth/auth.module';
 import { BookingsModule } from './modules/bookings/bookings.module';
 import { HealthModule } from './modules/health/health.module';
+import { MajorsModule } from './modules/majors/majors.module';
 import { ModerationModule } from './modules/moderation/moderation.module';
 import { RoommateModule } from './modules/roommate/roommate.module';
 import { StatsModule } from './modules/stats/stats.module';
@@ -51,6 +52,7 @@ import { UsersModule } from './modules/users/users.module';
     RoommateModule,
     ModerationModule,
     StatsModule,
+    MajorsModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },

@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { authApi, type LoginResult } from '@/lib/api/auth';
@@ -73,9 +74,8 @@ function useAfterLogin() {
 
 function ProspectiveForm() {
   const afterLogin = useAfterLogin();
-  const [sbd, setSbd] = useState('');
-  const [password, setPassword] = useState('');
-  const [major, setMajor] = useState('');
+  const [identifier, setIdentifier] = useState('');
+  const [dob, setDob] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -84,7 +84,7 @@ function ProspectiveForm() {
     setError('');
     setLoading(true);
     try {
-      afterLogin(await authApi.prospectiveLogin(sbd.trim(), password, major.trim()));
+      afterLogin(await authApi.prospectiveLogin(identifier.trim(), dob));
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -94,12 +94,17 @@ function ProspectiveForm() {
 
   return (
     <form onSubmit={submit} className="space-y-3">
-      <p className="text-sm text-slate-500">Đăng nhập bằng tài khoản thí sinh tuyển sinh.</p>
-      <Input label="Số báo danh (SBD)" value={sbd} onChange={setSbd} placeholder="VD: DDN2025001" />
-      <Input label="Mật khẩu thí sinh" value={password} onChange={setPassword} type="password" />
-      <Input label="Ngành dự kiến nhập học" value={major} onChange={setMajor} placeholder="VD: Kiến trúc" />
+      <p className="text-sm text-slate-500">Đăng nhập bằng email/SĐT đã đăng ký tuyển sinh.</p>
+      <Input label="Email hoặc số điện thoại" value={identifier} onChange={setIdentifier} placeholder="email@... hoặc 0905..." />
+      <Input label="Ngày sinh (mật khẩu)" value={dob} onChange={setDob} type="date" />
       {error && <ErrorText>{error}</ErrorText>}
       <Submit loading={loading}>Đăng nhập</Submit>
+      <p className="text-center text-sm text-slate-500">
+        Chưa có tài khoản?{' '}
+        <Link href="/register/student" className="font-medium text-brand hover:underline">
+          Đăng ký tân sinh viên
+        </Link>
+      </p>
     </form>
   );
 }
@@ -161,6 +166,12 @@ function StaffForm() {
       <Input label="Mật khẩu" value={password} onChange={setPassword} type="password" />
       {error && <ErrorText>{error}</ErrorText>}
       <Submit loading={loading}>Đăng nhập</Submit>
+      <p className="text-center text-sm text-slate-500">
+        Là chủ trọ mới?{' '}
+        <Link href="/register/landlord" className="font-medium text-brand hover:underline">
+          Đăng ký cho thuê
+        </Link>
+      </p>
     </form>
   );
 }

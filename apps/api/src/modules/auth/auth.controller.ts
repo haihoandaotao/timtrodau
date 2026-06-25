@@ -8,6 +8,7 @@ import { AuthService } from './auth.service';
 import { LandlordRegisterDto } from './dto/landlord-register.dto';
 import { LoginDto } from './dto/login.dto';
 import { ProspectiveLoginDto } from './dto/prospective-login.dto';
+import { ProspectiveRegisterDto } from './dto/prospective-register.dto';
 import { RefreshDto } from './dto/refresh.dto';
 import { RequestOtpDto } from './dto/request-otp.dto';
 import { StudentLoginDto } from './dto/student-login.dto';
@@ -54,13 +55,25 @@ export class AuthController {
   @Post('prospective/login')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Tân sinh viên đăng nhập (tài khoản thí sinh + ngành dự kiến)',
-    description: 'Xác thực SBD + mật khẩu tài khoản tuyển sinh; lưu ngành dự kiến nhập học.',
+    summary: 'Tân sinh viên đăng nhập (email/SĐT + ngày sinh)',
+    description: 'Mật khẩu là ngày sinh; xác thực với hệ thống tuyển sinh (mock).',
   })
   @ApiResponse({ status: 200, description: 'Đăng nhập thành công' })
-  @ApiResponse({ status: 401, description: 'Sai SBD/mật khẩu' })
+  @ApiResponse({ status: 401, description: 'Sai email/SĐT hoặc ngày sinh' })
   prospectiveLogin(@Body() dto: ProspectiveLoginDto) {
     return this.authService.prospectiveLogin(dto);
+  }
+
+  @Public()
+  @Post('prospective/register')
+  @ApiOperation({
+    summary: 'Thí sinh tự đăng ký (chưa có trong hệ thống tuyển sinh)',
+    description: 'Tạo tài khoản tân SV bằng email/SĐT + ngày sinh + ngành dự kiến, đăng nhập luôn.',
+  })
+  @ApiResponse({ status: 201, description: 'Đăng ký & đăng nhập thành công' })
+  @ApiResponse({ status: 409, description: 'Email/SĐT đã tồn tại' })
+  prospectiveRegister(@Body() dto: ProspectiveRegisterDto) {
+    return this.authService.prospectiveRegister(dto);
   }
 
   @Public()
