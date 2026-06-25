@@ -10,7 +10,9 @@ import { appConfig, dbConfig, jwtConfig, otpConfig, storageConfig } from './conf
 import { typeOrmModuleConfig } from './config/typeorm.module-config';
 import { AccommodationsModule } from './modules/accommodations/accommodations.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { BookingsModule } from './modules/bookings/bookings.module';
 import { HealthModule } from './modules/health/health.module';
+import { RoommateModule } from './modules/roommate/roommate.module';
 import { UsersModule } from './modules/users/users.module';
 
 /**
@@ -43,6 +45,8 @@ import { UsersModule } from './modules/users/users.module';
     UsersModule,
     AuthModule,
     AccommodationsModule,
+    BookingsModule,
+    RoommateModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },

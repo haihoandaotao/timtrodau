@@ -3,6 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { accommodationsApi } from '@/lib/api/accommodations';
+import { BookingButton } from '@/components/BookingButton';
 import { ACCOMMODATION_TYPE_LABEL, formatVnd } from '@/lib/format';
 
 const API_ORIGIN = (process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3001/api/v1').replace(
@@ -116,15 +117,8 @@ export default function RoomDetailPage({ params }: { params: { id: string } }) {
         />
       </section>
 
-      {/* Giữ chỗ (Phase 4) */}
-      <button
-        type="button"
-        disabled
-        className="mt-5 w-full rounded-lg bg-brand py-3 font-semibold text-white opacity-60"
-        title="Tính năng giữ chỗ sẽ có ở Phase 4"
-      >
-        Đăng ký giữ chỗ (sắp có)
-      </button>
+      {/* Giữ chỗ (DAL-11) */}
+      <BookingButton accommodationId={room.id} disabled={!room.isAvailable} />
     </main>
   );
 }
