@@ -67,7 +67,7 @@ function useAfterLogin() {
   const { signIn } = useAuth();
   const router = useRouter();
   return (res: LoginResult) => {
-    signIn(res.tokens.accessToken, res.user);
+    signIn(res.tokens.accessToken, res.user, res.tokens.refreshToken);
     router.push(res.user.role === 'ADMIN' ? '/admin' : '/search');
   };
 }

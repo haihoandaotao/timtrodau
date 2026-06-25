@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { accommodationsApi } from '@/lib/api/accommodations';
 import { BookingButton } from '@/components/BookingButton';
+import { FavoriteButton } from '@/components/FavoriteButton';
 import { ACCOMMODATION_TYPE_LABEL, formatVnd } from '@/lib/format';
 
 const API_ORIGIN = (process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3001/api/v1').replace(
@@ -69,7 +70,10 @@ export default function RoomDetailPage({ params }: { params: { id: string } }) {
             {room.isAvailable ? 'Còn phòng' : 'Hết phòng'}
           </span>
         </div>
-        <h1 className="text-xl font-bold text-slate-800">{room.title}</h1>
+        <div className="flex items-start justify-between gap-3">
+          <h1 className="text-xl font-bold text-slate-800">{room.title}</h1>
+          <FavoriteButton accommodationId={room.id} />
+        </div>
         <p className="text-2xl font-bold text-brand">{formatVnd(room.price)}/tháng</p>
         <p className="text-sm text-slate-500">📍 {room.address}</p>
         {room.description && <p className="text-slate-700">{room.description}</p>}

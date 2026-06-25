@@ -35,6 +35,9 @@ export function Header() {
               <Link href="/roommates" className="hidden rounded-lg px-3 py-1.5 text-slate-600 transition hover:bg-slate-100 hover:text-brand sm:block">
                 Ở ghép
               </Link>
+              <Link href="/favorites" className="hidden rounded-lg px-3 py-1.5 text-slate-600 transition hover:bg-slate-100 hover:text-brand sm:block">
+                Đã lưu
+              </Link>
               <Link href="/bookings" className="rounded-lg px-3 py-1.5 text-slate-600 transition hover:bg-slate-100 hover:text-brand">
                 Giữ chỗ
               </Link>
@@ -59,9 +62,9 @@ export function Header() {
           {!loading &&
             (user ? (
               <div className="flex items-center gap-2">
-                <span className="hidden text-xs text-slate-500 sm:inline">
+                <Link href="/profile" className="hidden text-xs text-slate-500 hover:text-brand sm:inline">
                   {user.fullName} · {ROLE_LABEL[user.role] ?? user.role}
-                </span>
+                </Link>
                 <button
                   type="button"
                   onClick={signOut}

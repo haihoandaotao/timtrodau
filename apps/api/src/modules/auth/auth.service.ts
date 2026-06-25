@@ -295,6 +295,47 @@ export class AuthService {
     return this.sanitize(user);
   }
 
+  /** Cập nhật hồ sơ cá nhân (tên/email/SĐT). */
+  async updateProfile(
+    authUser: AuthUser,
+    dto: { fullName?: string; email?: string; phone?: string },
+  ): Promise<SafeUser> {
+    const user = await this.userRepo.findOne({ where: { id: authUser.id } });
+    if (!user) {
+      throw new UnauthorizedException();
+    }
+    if (dto.email && dto.email !== user.email) {
+      const dup = await this.userRepo.findOne({ where: { email: dto.email } });
+      if (dup && dup.id !== user.id) throw new ConflictException('Email đã được dùng');
+      user.email = dto.email;
+    }
+    if (dto.phone && dto.phone !== user.phone) {
+      const dup = await this.userRepo.findOne({ where: { phone: dto.phone } });
+      if (dup && dup.id !== user.id) throw new ConflictException('SĐT đã được dùng');
+      user.phone = dto.phone;
+    }
+    if (dto.fullName) user.fullName = dto.fullName;
+    return this.sanitize(await this.userRepo.save(user));
+  }
+
+  /** Đổi mật khẩu (chỉ tài khoản có mật khẩu: chủ trọ/admin). */
+  async changePassword(
+    authUser: AuthUser,
+    dto: { currentPassword: string; newPassword: string },
+  ): Promise<{ success: true }> {
+    const user = await this.userRepo.findOne({ where: { id: authUser.id } });
+    if (!user || !user.passwordHash) {
+      throw new BadRequestException('Tài khoản này không dùng mật khẩu');
+    }
+    const ok = await bcrypt.compare(dto.currentPassword, user.passwordHash);
+    if (!ok) {
+      throw new BadRequestException('Mật khẩu hiện tại không đúng');
+    }
+    user.passwordHash = await bcrypt.hash(dto.newPassword, 10);
+    await this.userRepo.save(user);
+    return { success: true };
+  }
+
   private async buildTokens(user: User): Promise<AuthTokens> {
     const payload: JwtPayload = { sub: user.id, role: user.role, phone: user.phone };
     const [accessToken, refreshToken] = await Promise.all([

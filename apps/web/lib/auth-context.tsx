@@ -2,13 +2,19 @@
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { authApi, type AuthUser } from './api/auth';
-import { clearAccessToken, getAccessToken, setAccessToken } from './auth-token';
+import {
+  clearAccessToken,
+  getAccessToken,
+  setAccessToken,
+  setRefreshToken,
+} from './auth-token';
 
 interface AuthContextValue {
   user: AuthUser | null;
   loading: boolean;
   /** Lưu token + user sau khi đăng nhập thành công. */
-  signIn: (token: string, user: AuthUser) => void;
+  signIn: (token: string, user: AuthUser, refreshToken?: string) => void;
+  setUser: (user: AuthUser) => void;
   signOut: () => void;
 }
 
@@ -32,8 +38,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .finally(() => setLoading(false));
   }, []);
 
-  const signIn = (token: string, u: AuthUser) => {
+  const signIn = (token: string, u: AuthUser, refreshToken?: string) => {
     setAccessToken(token);
+    if (refreshToken) setRefreshToken(refreshToken);
     setUser(u);
   };
 
@@ -43,7 +50,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signOut }}>
+    <AuthContext.Provider value={{ user, loading, signIn, setUser, signOut }}>
       {children}
     </AuthContext.Provider>
   );

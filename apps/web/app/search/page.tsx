@@ -1,6 +1,6 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import {
   accommodationsApi,
@@ -55,10 +55,17 @@ export default function SearchPage() {
     [keyword, priceIdx, distIdx, type, areaId, amenityIds],
   );
 
-  const { data, isLoading, isError } = useQuery({
-    queryKey: ['accommodations', filter],
-    queryFn: () => accommodationsApi.list(filter),
-  });
+  const { data, isLoading, isError, fetchNextPage, hasNextPage, isFetchingNextPage } =
+    useInfiniteQuery({
+      queryKey: ['accommodations', filter],
+      queryFn: ({ pageParam }) => accommodationsApi.list({ ...filter, page: pageParam }),
+      initialPageParam: 1,
+      getNextPageParam: (last) =>
+        last.meta.page < last.meta.totalPages ? last.meta.page + 1 : undefined,
+    });
+
+  const rooms = data?.pages.flatMap((p) => p.data) ?? [];
+  const total = data?.pages[0]?.meta.total ?? 0;
 
   const toggleAmenity = (id: number) =>
     setAmenityIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
@@ -127,14 +134,26 @@ export default function SearchPage() {
         {isError && <p className="text-brand">Không tải được dữ liệu. Kiểm tra API đang chạy.</p>}
         {data && (
           <>
-            <p className="mb-3 text-sm text-slate-500">Tìm thấy {data.meta.total} phòng</p>
+            <p className="mb-3 text-sm text-slate-500">Tìm thấy {total} phòng</p>
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-              {data.data.map((room) => (
+              {rooms.map((room) => (
                 <RoomCard key={room.id} room={room} />
               ))}
             </div>
-            {data.data.length === 0 && (
+            {rooms.length === 0 && (
               <p className="text-slate-500">Không có phòng phù hợp bộ lọc.</p>
+            )}
+            {hasNextPage && (
+              <div className="mt-5 text-center">
+                <button
+                  type="button"
+                  onClick={() => fetchNextPage()}
+                  disabled={isFetchingNextPage}
+                  className="rounded-xl border border-brand px-5 py-2.5 font-semibold text-brand transition hover:bg-brand-50 disabled:opacity-60"
+                >
+                  {isFetchingNextPage ? 'Đang tải…' : 'Tải thêm'}
+                </button>
+              </div>
             )}
           </>
         )}

@@ -1,4 +1,13 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Patch,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Public } from '../../common/decorators/public.decorator';
@@ -9,6 +18,7 @@ import { LandlordRegisterDto } from './dto/landlord-register.dto';
 import { LoginDto } from './dto/login.dto';
 import { ProspectiveLoginDto } from './dto/prospective-login.dto';
 import { ProspectiveRegisterDto } from './dto/prospective-register.dto';
+import { ChangePasswordDto, UpdateProfileDto } from './dto/update-profile.dto';
 import { RefreshDto } from './dto/refresh.dto';
 import { RequestOtpDto } from './dto/request-otp.dto';
 import { StudentLoginDto } from './dto/student-login.dto';
@@ -130,5 +140,29 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'Chưa đăng nhập' })
   me(@CurrentUser() user: AuthUser) {
     return this.authService.getProfile(user);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @Patch('profile')
+  @ApiOperation({ summary: 'Cập nhật hồ sơ cá nhân' })
+  @ApiResponse({ status: 200, description: 'Đã cập nhật' })
+  @ApiResponse({ status: 409, description: 'Email/SĐT trùng' })
+  updateProfile(@CurrentUser() user: AuthUser, @Body() dto: UpdateProfileDto) {
+    return this.authService.updateProfile(user, dto);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @Post('change-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Đổi mật khẩu (chủ trọ/admin)' })
+  @ApiResponse({ status: 200, description: 'Đổi thành công' })
+  @ApiResponse({
+    status: 400,
+    description: 'Mật khẩu hiện tại sai / tài khoản không dùng mật khẩu',
+  })
+  changePassword(@CurrentUser() user: AuthUser, @Body() dto: ChangePasswordDto) {
+    return this.authService.changePassword(user, dto);
   }
 }

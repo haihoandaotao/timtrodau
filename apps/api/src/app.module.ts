@@ -11,6 +11,7 @@ import { typeOrmModuleConfig } from './config/typeorm.module-config';
 import { AccommodationsModule } from './modules/accommodations/accommodations.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { BookingsModule } from './modules/bookings/bookings.module';
+import { FavoritesModule } from './modules/favorites/favorites.module';
 import { HealthModule } from './modules/health/health.module';
 import { MajorsModule } from './modules/majors/majors.module';
 import { ModerationModule } from './modules/moderation/moderation.module';
@@ -53,6 +54,7 @@ import { UsersModule } from './modules/users/users.module';
     ModerationModule,
     StatsModule,
     MajorsModule,
+    FavoritesModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },

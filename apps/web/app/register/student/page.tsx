@@ -37,7 +37,7 @@ export default function StudentRegisterPage() {
         dob,
         intendedMajor: major,
       });
-      signIn(res.tokens.accessToken, res.user);
+      signIn(res.tokens.accessToken, res.user, res.tokens.refreshToken);
       router.push('/search');
     } catch (err) {
       setError((err as Error).message);

@@ -1,4 +1,10 @@
 import { apiFetch } from './client';
+import { getAccessToken } from '../auth-token';
+
+function authHeaders(): Record<string, string> {
+  const token = getAccessToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
 
 export type UserRole = 'STUDENT' | 'LANDLORD' | 'ADMIN';
 
@@ -76,6 +82,20 @@ export const authApi = {
 
   me: (token: string) =>
     apiFetch<AuthUser>('/auth/me', { headers: { Authorization: `Bearer ${token}` } }),
+
+  updateProfile: (payload: { fullName?: string; email?: string; phone?: string }) =>
+    apiFetch<AuthUser>('/auth/profile', {
+      method: 'PATCH',
+      headers: authHeaders(),
+      body: JSON.stringify(payload),
+    }),
+
+  changePassword: (currentPassword: string, newPassword: string) =>
+    apiFetch<{ success: boolean }>('/auth/change-password', {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ currentPassword, newPassword }),
+    }),
 };
 
 export interface Major {
