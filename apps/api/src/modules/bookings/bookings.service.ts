@@ -1,7 +1,13 @@
-import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOptionsWhere, In, Repository } from 'typeorm';
-import { BookingStatus } from '../../common/enums';
+import { BookingStatus, UserRole } from '../../common/enums';
+import { AuthUser } from '../../common/interfaces/jwt-payload.interface';
 import { Paginated } from '../../common/interfaces/paginated.interface';
 import { AccommodationsService } from '../accommodations/accommodations.service';
 import { LandlordProfile } from '../users/entities/landlord-profile.entity';
@@ -106,17 +112,31 @@ export class BookingsService {
     return { data, meta: { total, page, limit, totalPages: Math.ceil(total / limit) } };
   }
 
+  /** Chủ trọ: danh sách giữ chỗ của các phòng MÌNH đăng. */
+  findForLandlord(landlordId: string): Promise<Booking[]> {
+    return this.bookingRepo
+      .createQueryBuilder('b')
+      .leftJoinAndSelect('b.accommodation', 'a')
+      .leftJoinAndSelect('b.student', 's')
+      .where('a.landlord_id = :landlordId', { landlordId })
+      .orderBy('b.created_at', 'DESC')
+      .getMany();
+  }
+
   /**
-   * Cập nhật trạng thái booking. Khi chuyển sang SUCCESS (lần đầu) → tăng
-   * verified_booking_count của chủ trọ (phục vụ tiêu chí "chủ trọ uy tín").
+   * Cập nhật trạng thái booking. Admin sửa bất kỳ; chủ trọ chỉ sửa booking
+   * thuộc phòng mình. Khi chuyển SUCCESS (lần đầu) → tăng verified_booking_count.
    */
-  async updateStatus(id: string, status: BookingStatus): Promise<Booking> {
+  async updateStatus(id: string, status: BookingStatus, user: AuthUser): Promise<Booking> {
     const booking = await this.bookingRepo.findOne({
       where: { id },
       relations: { accommodation: true },
     });
     if (!booking) {
       throw new NotFoundException('Không tìm thấy booking');
+    }
+    if (user.role !== UserRole.ADMIN && booking.accommodation?.landlordId !== user.id) {
+      throw new ForbiddenException('Bạn không có quyền cập nhật booking này');
     }
 
     const becameSuccess =

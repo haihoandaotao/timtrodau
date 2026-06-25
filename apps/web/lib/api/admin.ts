@@ -68,6 +68,19 @@ export const adminApi = {
       body: JSON.stringify({ status }),
     }),
 
+  // Bookings (DAL-14)
+  bookings: (status?: string, page = 1) =>
+    apiFetch<Paginated<AdminBooking>>(
+      `/bookings?${status ? `status=${status}&` : ''}page=${page}`,
+      { headers: authHeaders() },
+    ),
+  setBookingStatus: (id: string, status: string) =>
+    apiFetch<unknown>(`/bookings/${id}/status`, {
+      method: 'PATCH',
+      headers: authHeaders(),
+      body: JSON.stringify({ status }),
+    }),
+
   // Majors (cấu hình ngành)
   majors: () => apiFetch<AdminMajor[]>('/admin/majors', { headers: authHeaders() }),
   createMajor: (name: string) =>
@@ -103,6 +116,14 @@ export interface AdminMajor {
   id: number;
   name: string;
   isActive: boolean;
+}
+export interface AdminBooking {
+  id: string;
+  status: string;
+  note: string | null;
+  createdAt: string;
+  accommodation?: { id: string; title: string };
+  student?: { id: string; fullName: string; phone: string | null };
 }
 export interface PendingLandlord {
   userId: string;

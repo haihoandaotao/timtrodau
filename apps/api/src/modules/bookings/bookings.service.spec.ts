@@ -1,9 +1,13 @@
 /**
  * Unit test BookingsService (DAL-11) — mock (KHÔNG cần MySQL).
  */
-import { ConflictException, NotFoundException } from '@nestjs/common';
-import { BookingStatus } from '../../common/enums';
+import { ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import { BookingStatus, UserRole } from '../../common/enums';
+import { AuthUser } from '../../common/interfaces/jwt-payload.interface';
 import { BookingsService } from './bookings.service';
+
+const ADMIN: AuthUser = { id: 'A1', role: UserRole.ADMIN, phone: null };
+const LANDLORD: AuthUser = { id: 'L1', role: UserRole.LANDLORD, phone: null };
 
 describe('BookingsService', () => {
   let service: BookingsService;
@@ -88,18 +92,39 @@ describe('BookingsService', () => {
   });
 
   describe('updateStatus (DAL-14)', () => {
-    it('T14-E2 (Edge): chuyển SUCCESS → tăng verified_booking_count chủ trọ', async () => {
+    it('T14-E2 (Edge): admin chuyển SUCCESS → tăng verified_booking_count', async () => {
       bookingRepo.findOne.mockResolvedValue({
         id: '1',
         status: BookingStatus.CONTACTED,
         accommodation: { landlordId: 'L1' },
       });
-      await service.updateStatus('1', BookingStatus.SUCCESS);
+      await service.updateStatus('1', BookingStatus.SUCCESS, ADMIN);
       expect(landlordRepo.increment).toHaveBeenCalledWith(
         { userId: 'L1' },
         'verifiedBookingCount',
         1,
       );
+    });
+
+    it('Happy: chủ trọ sở hữu cập nhật được booking của mình', async () => {
+      bookingRepo.findOne.mockResolvedValue({
+        id: '1',
+        status: BookingStatus.PENDING,
+        accommodation: { landlordId: 'L1' },
+      });
+      const res = await service.updateStatus('1', BookingStatus.CONTACTED, LANDLORD);
+      expect(res.status).toBe(BookingStatus.CONTACTED);
+    });
+
+    it('Error: chủ trọ KHÁC cập nhật booking không thuộc mình → Forbidden', async () => {
+      bookingRepo.findOne.mockResolvedValue({
+        id: '1',
+        status: BookingStatus.PENDING,
+        accommodation: { landlordId: 'OTHER' },
+      });
+      await expect(
+        service.updateStatus('1', BookingStatus.CONTACTED, LANDLORD),
+      ).rejects.toBeInstanceOf(ForbiddenException);
     });
 
     it('Edge: SUCCESS → SUCCESS lần nữa không tăng trùng', async () => {
@@ -108,15 +133,15 @@ describe('BookingsService', () => {
         status: BookingStatus.SUCCESS,
         accommodation: { landlordId: 'L1' },
       });
-      await service.updateStatus('1', BookingStatus.SUCCESS);
+      await service.updateStatus('1', BookingStatus.SUCCESS, ADMIN);
       expect(landlordRepo.increment).not.toHaveBeenCalled();
     });
 
     it('Error: booking không tồn tại → NotFound', async () => {
       bookingRepo.findOne.mockResolvedValue(null);
-      await expect(service.updateStatus('404', BookingStatus.SUCCESS)).rejects.toBeInstanceOf(
-        NotFoundException,
-      );
+      await expect(
+        service.updateStatus('404', BookingStatus.SUCCESS, ADMIN),
+      ).rejects.toBeInstanceOf(NotFoundException);
     });
   });
 });

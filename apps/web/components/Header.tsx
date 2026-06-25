@@ -30,6 +30,16 @@ export function Header() {
           >
             Tìm phòng
           </Link>
+          {!loading && user?.role === 'STUDENT' && (
+            <>
+              <Link href="/roommates" className="hidden rounded-lg px-3 py-1.5 text-slate-600 transition hover:bg-slate-100 hover:text-brand sm:block">
+                Ở ghép
+              </Link>
+              <Link href="/bookings" className="rounded-lg px-3 py-1.5 text-slate-600 transition hover:bg-slate-100 hover:text-brand">
+                Giữ chỗ
+              </Link>
+            </>
+          )}
           {!loading && user?.role === 'LANDLORD' && (
             <Link
               href="/landlord"

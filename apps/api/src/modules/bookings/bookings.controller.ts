@@ -45,6 +45,16 @@ export class BookingsController {
     return this.service.findMine(user.id);
   }
 
+  // ---------- Chủ trọ ----------
+
+  @Roles(UserRole.LANDLORD)
+  @Get('landlord')
+  @ApiOperation({ summary: 'Chủ trọ: danh sách giữ chỗ của các phòng mình' })
+  @ApiResponse({ status: 200, description: 'Danh sách booking' })
+  findForLandlord(@CurrentUser() user: AuthUser) {
+    return this.service.findForLandlord(user.id);
+  }
+
   // ---------- Admin (DAL-14) ----------
 
   @Roles(UserRole.ADMIN)
@@ -55,15 +65,20 @@ export class BookingsController {
     return this.service.findAll(query);
   }
 
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.LANDLORD)
   @Patch(':id/status')
   @ApiOperation({
-    summary: 'Admin: cập nhật trạng thái booking',
+    summary: 'Cập nhật trạng thái booking (Admin hoặc chủ trọ sở hữu)',
     description: 'Chuyển SUCCESS sẽ tăng verified_booking_count của chủ trọ.',
   })
   @ApiResponse({ status: 200, description: 'Đã cập nhật' })
+  @ApiResponse({ status: 403, description: 'Không sở hữu booking' })
   @ApiResponse({ status: 404, description: 'Không tìm thấy booking' })
-  updateStatus(@Param('id') id: string, @Body() dto: UpdateBookingStatusDto) {
-    return this.service.updateStatus(id, dto.status);
+  updateStatus(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Body() dto: UpdateBookingStatusDto,
+  ) {
+    return this.service.updateStatus(id, dto.status, user);
   }
 }

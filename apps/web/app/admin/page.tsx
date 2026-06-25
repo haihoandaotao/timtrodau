@@ -37,6 +37,9 @@ export default function AdminDashboard() {
           <Link href="/admin/moderation" className="rounded-lg border border-brand px-3 py-1.5 text-sm text-brand">
             Duyệt tin
           </Link>
+          <Link href="/admin/bookings" className="rounded-lg border border-brand px-3 py-1.5 text-sm text-brand">
+            Giữ chỗ
+          </Link>
           <Link href="/admin/users" className="rounded-lg border border-brand px-3 py-1.5 text-sm text-brand">
             Người dùng
           </Link>
