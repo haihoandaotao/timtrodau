@@ -14,6 +14,7 @@ describe('BookingsService', () => {
     save: jest.fn(async (x) => ({ id: '100', ...x })),
     find: jest.fn(),
   };
+  const landlordRepo = { increment: jest.fn() };
   const accommodationsService = { findPublicById: jest.fn() };
   const usersService = { findById: jest.fn() };
   const notifyService = { notifyNewBooking: jest.fn() };
@@ -22,6 +23,7 @@ describe('BookingsService', () => {
     jest.clearAllMocks();
     service = new BookingsService(
       bookingRepo as never,
+      landlordRepo as never,
       accommodationsService as never,
       usersService as never,
       notifyService as never,
@@ -81,6 +83,39 @@ describe('BookingsService', () => {
       expect(res).toHaveLength(1);
       expect(bookingRepo.find).toHaveBeenCalledWith(
         expect.objectContaining({ where: { studentId: 'S1' } }),
+      );
+    });
+  });
+
+  describe('updateStatus (DAL-14)', () => {
+    it('T14-E2 (Edge): chuyển SUCCESS → tăng verified_booking_count chủ trọ', async () => {
+      bookingRepo.findOne.mockResolvedValue({
+        id: '1',
+        status: BookingStatus.CONTACTED,
+        accommodation: { landlordId: 'L1' },
+      });
+      await service.updateStatus('1', BookingStatus.SUCCESS);
+      expect(landlordRepo.increment).toHaveBeenCalledWith(
+        { userId: 'L1' },
+        'verifiedBookingCount',
+        1,
+      );
+    });
+
+    it('Edge: SUCCESS → SUCCESS lần nữa không tăng trùng', async () => {
+      bookingRepo.findOne.mockResolvedValue({
+        id: '1',
+        status: BookingStatus.SUCCESS,
+        accommodation: { landlordId: 'L1' },
+      });
+      await service.updateStatus('1', BookingStatus.SUCCESS);
+      expect(landlordRepo.increment).not.toHaveBeenCalled();
+    });
+
+    it('Error: booking không tồn tại → NotFound', async () => {
+      bookingRepo.findOne.mockResolvedValue(null);
+      await expect(service.updateStatus('404', BookingStatus.SUCCESS)).rejects.toBeInstanceOf(
+        NotFoundException,
       );
     });
   });
