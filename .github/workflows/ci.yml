@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [develop, QA, staging, main]
+  pull_request:
+
+jobs:
+  api:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: devpass
+          MYSQL_DATABASE: dau_accommodation
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -pdevpass"
+          --health-interval=10s --health-timeout=5s --health-retries=10
+    env:
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_USERNAME: root
+      DB_PASSWORD: devpass
+      DB_DATABASE: dau_accommodation
+      JWT_ACCESS_SECRET: ci-access
+      JWT_REFRESH_SECRET: ci-refresh
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Lint API
+        run: npm run lint --workspace=apps/api
+      - name: Build API
+        run: npm run build --workspace=apps/api
+      - name: Unit test API
+        run: npm test --workspace=apps/api
+      - name: Migrate + seed
+        working-directory: apps/api
+        run: npm run migration:run && npm run seed
+      - name: E2E API
+        run: npm run test:e2e --workspace=apps/api
+
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Lint web
+        run: npm run lint --workspace=apps/web
+      - name: Build web
+        run: npm run build --workspace=apps/web

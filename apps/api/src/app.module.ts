@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { ServeStaticModule } from '@nestjs/serve-static';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { join } from 'path';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
@@ -32,6 +33,8 @@ import { UsersModule } from './modules/users/users.module';
       envFilePath: ['.env', '../../.env'],
       load: [appConfig, dbConfig, jwtConfig, otpConfig, storageConfig],
     }),
+    // Chống lạm dụng/brute-force: mặc định 120 req/phút/IP (login siết riêng).
+    ThrottlerModule.forRoot([{ ttl: 60000, limit: 120 }]),
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => typeOrmModuleConfig(config),
@@ -57,6 +60,7 @@ import { UsersModule } from './modules/users/users.module';
     FavoritesModule,
   ],
   providers: [
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
   ],

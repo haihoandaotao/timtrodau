@@ -9,6 +9,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Public } from '../../common/decorators/public.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -62,6 +63,7 @@ export class AuthController {
   }
 
   @Public()
+  @Throttle({ default: { limit: 6, ttl: 60000 } })
   @Post('prospective/login')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -87,6 +89,7 @@ export class AuthController {
   }
 
   @Public()
+  @Throttle({ default: { limit: 6, ttl: 60000 } })
   @Post('student/login')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -112,6 +115,7 @@ export class AuthController {
   }
 
   @Public()
+  @Throttle({ default: { limit: 6, ttl: 60000 } })
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Đăng nhập chủ trọ/admin (SĐT + mật khẩu)' })
