@@ -7,8 +7,10 @@ import { AuthUser } from '../../common/interfaces/jwt-payload.interface';
 import { AuthService } from './auth.service';
 import { LandlordRegisterDto } from './dto/landlord-register.dto';
 import { LoginDto } from './dto/login.dto';
+import { ProspectiveLoginDto } from './dto/prospective-login.dto';
 import { RefreshDto } from './dto/refresh.dto';
 import { RequestOtpDto } from './dto/request-otp.dto';
+import { StudentLoginDto } from './dto/student-login.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
 
 @ApiTags('Auth')
@@ -46,6 +48,32 @@ export class AuthController {
   @ApiResponse({ status: 400, description: 'OTP sai/hết hạn/đã dùng' })
   verifyOtp(@Body() dto: VerifyOtpDto) {
     return this.authService.verifyOtp(dto);
+  }
+
+  @Public()
+  @Post('prospective/login')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Tân sinh viên đăng nhập (tài khoản thí sinh + ngành dự kiến)',
+    description: 'Xác thực SBD + mật khẩu tài khoản tuyển sinh; lưu ngành dự kiến nhập học.',
+  })
+  @ApiResponse({ status: 200, description: 'Đăng nhập thành công' })
+  @ApiResponse({ status: 401, description: 'Sai SBD/mật khẩu' })
+  prospectiveLogin(@Body() dto: ProspectiveLoginDto) {
+    return this.authService.prospectiveLogin(dto);
+  }
+
+  @Public()
+  @Post('student/login')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Sinh viên trường đăng nhập (MSSV + ngày sinh)',
+    description: 'Mật khẩu là ngày sinh (yyyy-mm-dd).',
+  })
+  @ApiResponse({ status: 200, description: 'Đăng nhập thành công' })
+  @ApiResponse({ status: 401, description: 'Sai MSSV/ngày sinh' })
+  studentLogin(@Body() dto: StudentLoginDto) {
+    return this.authService.studentLogin(dto);
   }
 
   @Public()

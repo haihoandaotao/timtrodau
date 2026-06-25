@@ -10,16 +10,21 @@ import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
 import { DataSource, Repository } from 'typeorm';
-import { UserRole, UserStatus, VerifyStatus } from '../../common/enums';
+import { StudentType, UserRole, UserStatus, VerifyStatus } from '../../common/enums';
 import { AuthUser, JwtPayload } from '../../common/interfaces/jwt-payload.interface';
 import { OtpService } from '../notify/otp.service';
 import { User } from '../users/entities/user.entity';
 import { LandlordProfile } from '../users/entities/landlord-profile.entity';
+import { StudentProfile } from '../users/entities/student-profile.entity';
 import { UsersService } from '../users/users.service';
+import { AdmissionCandidate } from './entities/admission-candidate.entity';
+import { StudentRecord } from './entities/student-record.entity';
 import { OtpRequest } from './entities/otp-request.entity';
 import { LandlordRegisterDto } from './dto/landlord-register.dto';
 import { LoginDto } from './dto/login.dto';
+import { ProspectiveLoginDto } from './dto/prospective-login.dto';
 import { RequestOtpDto } from './dto/request-otp.dto';
+import { StudentLoginDto } from './dto/student-login.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
 
 export interface AuthTokens {
@@ -30,7 +35,7 @@ export interface AuthTokens {
 export interface SafeUser {
   id: string;
   fullName: string;
-  phone: string;
+  phone: string | null;
   email: string | null;
   studentCode: string | null;
   role: UserRole;
@@ -42,12 +47,83 @@ export class AuthService {
   constructor(
     @InjectRepository(OtpRequest) private readonly otpRepo: Repository<OtpRequest>,
     @InjectRepository(User) private readonly userRepo: Repository<User>,
+    @InjectRepository(StudentProfile)
+    private readonly studentProfileRepo: Repository<StudentProfile>,
+    @InjectRepository(AdmissionCandidate)
+    private readonly admissionRepo: Repository<AdmissionCandidate>,
+    @InjectRepository(StudentRecord)
+    private readonly studentRecordRepo: Repository<StudentRecord>,
     private readonly usersService: UsersService,
     private readonly otpService: OtpService,
     private readonly jwtService: JwtService,
     private readonly config: ConfigService,
     private readonly dataSource: DataSource,
   ) {}
+
+  // ---------- SV: đăng nhập theo đối tượng (mock hệ thống ngoài) ----------
+
+  /** Tân sinh viên: xác thực tài khoản thí sinh (SBD + mật khẩu) + ngành dự kiến. */
+  async prospectiveLogin(
+    dto: ProspectiveLoginDto,
+  ): Promise<{ tokens: AuthTokens; user: SafeUser }> {
+    const cand = await this.admissionRepo.findOne({ where: { sbd: dto.sbd } });
+    if (!cand || !(await bcrypt.compare(dto.password, cand.passwordHash))) {
+      throw new UnauthorizedException('Sai số báo danh hoặc mật khẩu thí sinh');
+    }
+    const user = await this.upsertStudent(dto.sbd, cand.fullName, {
+      studentType: StudentType.PROSPECTIVE,
+      intendedMajor: dto.intendedMajor,
+      major: dto.intendedMajor,
+    });
+    return { tokens: await this.buildTokens(user), user: this.sanitize(user) };
+  }
+
+  /** Sinh viên trường: xác thực MSSV + ngày sinh (làm mật khẩu). */
+  async studentLogin(dto: StudentLoginDto): Promise<{ tokens: AuthTokens; user: SafeUser }> {
+    const rec = await this.studentRecordRepo.findOne({
+      where: { studentCode: dto.studentCode },
+    });
+    const recDob = rec ? String(rec.dateOfBirth).slice(0, 10) : null;
+    if (!rec || recDob !== dto.dob) {
+      throw new UnauthorizedException('Sai mã sinh viên hoặc ngày sinh');
+    }
+    const user = await this.upsertStudent(rec.studentCode, rec.fullName, {
+      studentType: StudentType.CURRENT,
+      major: rec.major ?? undefined,
+    });
+    return { tokens: await this.buildTokens(user), user: this.sanitize(user) };
+  }
+
+  /** Tạo/cập nhật user SV + student_profile từ dữ liệu hệ thống ngoài. */
+  private async upsertStudent(
+    studentCode: string,
+    fullName: string,
+    profile: { studentType: StudentType; major?: string; intendedMajor?: string },
+  ): Promise<User> {
+    let user = await this.userRepo.findOne({ where: { studentCode } });
+    if (!user) {
+      user = this.userRepo.create({
+        studentCode,
+        fullName,
+        role: UserRole.STUDENT,
+        status: UserStatus.ACTIVE,
+      });
+    } else {
+      user.fullName = fullName;
+    }
+    user = await this.userRepo.save(user);
+
+    let sp = await this.studentProfileRepo.findOne({ where: { userId: user.id } });
+    if (!sp) {
+      sp = this.studentProfileRepo.create({ userId: user.id });
+    }
+    sp.studentType = profile.studentType;
+    if (profile.major !== undefined) sp.major = profile.major;
+    if (profile.intendedMajor !== undefined) sp.intendedMajor = profile.intendedMajor;
+    await this.studentProfileRepo.save(sp);
+
+    return user;
+  }
 
   // ---------- SV: OTP login ----------
 

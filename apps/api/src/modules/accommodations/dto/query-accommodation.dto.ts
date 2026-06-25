@@ -1,10 +1,15 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
-import { IsArray, IsEnum, IsInt, IsNumber, IsOptional, Min } from 'class-validator';
+import { IsArray, IsEnum, IsInt, IsNumber, IsOptional, IsString, Min } from 'class-validator';
 import { AccommodationType } from '../../../common/enums';
 
 /** Smart Filter cho danh sách phòng công khai (DAL-8). Query params đều optional. */
 export class QueryAccommodationDto {
+  @ApiPropertyOptional({ description: 'Từ khoá (tiêu đề/địa chỉ)' })
+  @IsOptional()
+  @IsString()
+  keyword?: string;
+
   @ApiPropertyOptional({ description: 'ID khu vực' })
   @IsOptional()
   @Type(() => Number)

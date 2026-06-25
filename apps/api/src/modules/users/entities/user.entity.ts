@@ -13,9 +13,10 @@ export class User extends BaseEntity {
   @Column({ name: 'full_name', type: 'varchar', length: 191 })
   fullName: string;
 
+  // phone nullable: SV đăng nhập bằng SBD/MSSV có thể chưa có SĐT.
   @Index('idx_users_phone')
-  @Column({ type: 'varchar', length: 20, unique: true })
-  phone: string;
+  @Column({ type: 'varchar', length: 20, nullable: true, unique: true })
+  phone: string | null;
 
   @Column({ type: 'varchar', length: 191, nullable: true })
   email: string | null;

@@ -68,7 +68,7 @@ export class BookingsService {
 
     if (!existing && landlord) {
       await this.notifyService.notifyNewBooking({
-        landlordPhone: landlord.phone,
+        landlordPhone: landlord.phone ?? '',
         accommodationTitle: acc.title,
         studentName: student?.fullName ?? 'Sinh viên',
       });

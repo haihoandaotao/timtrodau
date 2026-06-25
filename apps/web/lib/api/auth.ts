@@ -23,18 +23,21 @@ export interface LoginResult {
 }
 
 export const authApi = {
-  requestOtp: (studentCode: string, phone: string) =>
-    apiFetch<{ requestId: string }>('/auth/otp/request', {
+  /** Tân sinh viên: tài khoản thí sinh tuyển sinh + ngành dự kiến. */
+  prospectiveLogin: (sbd: string, password: string, intendedMajor: string) =>
+    apiFetch<LoginResult>('/auth/prospective/login', {
       method: 'POST',
-      body: JSON.stringify({ studentCode, phone }),
+      body: JSON.stringify({ sbd, password, intendedMajor }),
     }),
 
-  verifyOtp: (requestId: string, code: string) =>
-    apiFetch<LoginResult>('/auth/otp/verify', {
+  /** Sinh viên trường: MSSV + ngày sinh (yyyy-mm-dd). */
+  studentLogin: (studentCode: string, dob: string) =>
+    apiFetch<LoginResult>('/auth/student/login', {
       method: 'POST',
-      body: JSON.stringify({ requestId, code }),
+      body: JSON.stringify({ studentCode, dob }),
     }),
 
+  /** Chủ trọ / Admin: SĐT + mật khẩu. */
   login: (phone: string, password: string) =>
     apiFetch<LoginResult>('/auth/login', {
       method: 'POST',

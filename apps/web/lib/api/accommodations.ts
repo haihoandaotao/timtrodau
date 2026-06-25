@@ -46,6 +46,7 @@ export interface Paginated<T> {
 }
 
 export interface AccommodationFilter {
+  keyword?: string;
   areaId?: number;
   distanceMax?: number;
   priceMin?: number;

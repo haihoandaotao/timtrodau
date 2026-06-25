@@ -57,6 +57,11 @@ export class AccommodationsService {
       .leftJoinAndSelect('a.amenities', 'am')
       .where('a.status = :status', { status: AccommodationStatus.PUBLISHED });
 
+    if (query.keyword && query.keyword.trim()) {
+      qb.andWhere('(a.title LIKE :kw OR a.address LIKE :kw)', {
+        kw: `%${query.keyword.trim()}%`,
+      });
+    }
     if (query.areaId !== undefined) {
       qb.andWhere('a.area_id = :areaId', { areaId: query.areaId });
     }

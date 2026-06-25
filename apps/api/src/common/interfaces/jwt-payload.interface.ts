@@ -4,12 +4,12 @@ import { UserRole } from '../enums';
 export interface JwtPayload {
   sub: string; // user id
   role: UserRole;
-  phone: string;
+  phone: string | null;
 }
 
 /** User đã xác thực, gắn vào request sau khi qua JwtAuthGuard. */
 export interface AuthUser {
   id: string;
   role: UserRole;
-  phone: string;
+  phone: string | null;
 }

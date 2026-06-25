@@ -1,7 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Between, LessThan, MoreThan, Repository } from 'typeorm';
-import { AccommodationStatus, BookingStatus, VerifyStatus } from '../../common/enums';
+import {
+  AccommodationStatus,
+  AccommodationType,
+  BookingStatus,
+  VerifyStatus,
+} from '../../common/enums';
 import { Accommodation } from '../accommodations/entities/accommodation.entity';
 import { Booking } from '../bookings/entities/booking.entity';
 import { LandlordProfile } from '../users/entities/landlord-profile.entity';
@@ -40,6 +45,35 @@ export class StatsService {
       publishedAccommodations,
       totalBookings,
     };
+  }
+
+  /** Trang chủ công khai: số liệu tổng quan theo loại hình + tổng lượt đăng ký. */
+  async publicOverview(): Promise<{
+    totalRooms: number;
+    traditional: number;
+    miniApt: number;
+    shared: number;
+    totalRegistrations: number;
+  }> {
+    const base = { status: AccommodationStatus.PUBLISHED };
+    const [totalRooms, traditional, miniApt, shared, totalRegistrations] = await Promise.all([
+      this.accRepo.count({ where: base }),
+      this.accRepo.count({ where: { ...base, type: AccommodationType.TRADITIONAL } }),
+      this.accRepo.count({ where: { ...base, type: AccommodationType.MINI_APT } }),
+      this.accRepo.count({ where: { ...base, type: AccommodationType.SHARED } }),
+      this.bookingRepo.count(),
+    ]);
+    return { totalRooms, traditional, miniApt, shared, totalRegistrations };
+  }
+
+  /** Trang chủ công khai: phòng nổi bật (còn trống, mới nhất). */
+  featured(limit = 6): Promise<Accommodation[]> {
+    return this.accRepo.find({
+      where: { status: AccommodationStatus.PUBLISHED, isAvailable: true },
+      relations: { images: true, area: true },
+      order: { createdAt: 'DESC' },
+      take: limit,
+    });
   }
 
   /** DAL-15: phân bố theo khoảng giá (chỉ phòng PUBLISHED). */

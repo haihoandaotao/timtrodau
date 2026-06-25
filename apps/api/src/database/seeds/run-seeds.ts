@@ -49,6 +49,43 @@ async function run() {
     }
   }
 
+  // --- Mock thí sinh tuyển sinh (tân SV: SBD + mật khẩu) ---
+  const candPass = process.env.SEED_CANDIDATE_PASSWORD ?? 'ThiSinh@123';
+  const candHash = await bcrypt.hash(candPass, 10);
+  const CANDIDATES: Array<{ sbd: string; name: string }> = [
+    { sbd: 'DDN2025001', name: 'Trần Tân Sinh' },
+    { sbd: 'DDN2025002', name: 'Lê Dự Bị' },
+  ];
+  for (const c of CANDIDATES) {
+    const exists = await ds.query('SELECT id FROM admission_candidates WHERE sbd = ? LIMIT 1', [
+      c.sbd,
+    ]);
+    if (!exists.length) {
+      await ds.query(
+        'INSERT INTO admission_candidates (sbd, full_name, password_hash) VALUES (?, ?, ?)',
+        [c.sbd, c.name, candHash],
+      );
+    }
+  }
+
+  // --- Mock sinh viên trường (SV: MSSV + ngày sinh) ---
+  const STUDENTS: Array<{ code: string; name: string; major: string; dob: string }> = [
+    { code: '2021120001', name: 'Nguyễn Văn Kiến', major: 'Kiến trúc', dob: '2003-05-12' },
+    { code: '2021120002', name: 'Phạm Thị Trúc', major: 'Kiến trúc', dob: '2003-09-20' },
+    { code: '2022150033', name: 'Hồ Quang Xây', major: 'Xây dựng', dob: '2004-01-08' },
+  ];
+  for (const s of STUDENTS) {
+    const exists = await ds.query('SELECT id FROM student_records WHERE student_code = ? LIMIT 1', [
+      s.code,
+    ]);
+    if (!exists.length) {
+      await ds.query(
+        'INSERT INTO student_records (student_code, full_name, major, date_of_birth) VALUES (?, ?, ?, ?)',
+        [s.code, s.name, s.major, s.dob],
+      );
+    }
+  }
+
   // --- Admin mặc định ---
   const adminPhone = process.env.SEED_ADMIN_PHONE ?? '0900000000';
   const adminPass = process.env.SEED_ADMIN_PASSWORD ?? 'Admin@123';

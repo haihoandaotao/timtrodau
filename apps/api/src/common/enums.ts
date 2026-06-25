@@ -6,6 +6,12 @@ export enum UserRole {
   ADMIN = 'ADMIN',
 }
 
+/** Phân loại sinh viên trong app. */
+export enum StudentType {
+  PROSPECTIVE = 'PROSPECTIVE', // tân sinh viên (thí sinh đang chờ nhập học)
+  CURRENT = 'CURRENT', // sinh viên đang học của trường
+}
+
 export enum UserStatus {
   ACTIVE = 'ACTIVE',
   PENDING = 'PENDING',

@@ -4,112 +4,138 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { authApi, type LoginResult } from '@/lib/api/auth';
 import { useAuth } from '@/lib/auth-context';
+import { Card } from '@/components/ui';
 
-type Tab = 'student' | 'password';
+type Persona = 'prospective' | 'student' | 'staff';
+
+const PERSONAS: Array<{ key: Persona; icon: string; title: string; desc: string }> = [
+  { key: 'prospective', icon: '🎓', title: 'Tân sinh viên', desc: 'Thí sinh đang chờ nhập học' },
+  { key: 'student', icon: '📘', title: 'Sinh viên của trường', desc: 'Đang theo học tại DAU' },
+  { key: 'staff', icon: '🏠', title: 'Chủ trọ / Quản trị', desc: 'Đối tác & ban quản trị' },
+];
 
 export default function LoginPage() {
-  const [tab, setTab] = useState<Tab>('student');
+  const [persona, setPersona] = useState<Persona | null>(null);
 
   return (
     <main className="mx-auto max-w-md px-4 py-8">
-      <h1 className="mb-1 text-center text-xl font-bold text-brand">Đăng nhập</h1>
-      <p className="mb-5 text-center text-sm text-slate-500">DAU Accommodation Link</p>
+      <h1 className="text-center text-2xl font-extrabold text-slate-800">Đăng nhập</h1>
+      <p className="mb-6 mt-1 text-center text-sm text-slate-500">
+        Chọn đối tượng để tiếp tục
+      </p>
 
-      <div className="mb-5 grid grid-cols-2 gap-1 rounded-lg bg-slate-100 p-1 text-sm">
-        <TabButton active={tab === 'student'} onClick={() => setTab('student')}>
-          Sinh viên (OTP)
-        </TabButton>
-        <TabButton active={tab === 'password'} onClick={() => setTab('password')}>
-          Chủ trọ / Admin
-        </TabButton>
-      </div>
-
-      {tab === 'student' ? <StudentLogin /> : <PasswordLogin />}
+      {!persona ? (
+        <div className="space-y-3">
+          {PERSONAS.map((p) => (
+            <button
+              key={p.key}
+              type="button"
+              onClick={() => setPersona(p.key)}
+              className="flex w-full items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-card transition hover:-translate-y-0.5 hover:border-brand hover:shadow-card-hover"
+            >
+              <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-50 text-xl">
+                {p.icon}
+              </span>
+              <span className="flex-1">
+                <span className="block font-semibold text-slate-800">{p.title}</span>
+                <span className="block text-sm text-slate-500">{p.desc}</span>
+              </span>
+              <span className="text-brand">›</span>
+            </button>
+          ))}
+        </div>
+      ) : (
+        <Card className="p-5">
+          <button
+            type="button"
+            onClick={() => setPersona(null)}
+            className="mb-4 text-sm text-slate-500 hover:text-brand"
+          >
+            ← Chọn lại đối tượng
+          </button>
+          {persona === 'prospective' && <ProspectiveForm />}
+          {persona === 'student' && <StudentForm />}
+          {persona === 'staff' && <StaffForm />}
+        </Card>
+      )}
     </main>
   );
 }
 
-/** Sau đăng nhập: điều hướng theo vai trò. */
 function useAfterLogin() {
   const { signIn } = useAuth();
   const router = useRouter();
   return (res: LoginResult) => {
     signIn(res.tokens.accessToken, res.user);
-    if (res.user.role === 'ADMIN') router.push('/admin');
-    else router.push('/search');
+    router.push(res.user.role === 'ADMIN' ? '/admin' : '/search');
   };
 }
 
-function StudentLogin() {
+function ProspectiveForm() {
   const afterLogin = useAfterLogin();
-  const [step, setStep] = useState<'request' | 'verify'>('request');
-  const [studentCode, setStudentCode] = useState('');
-  const [phone, setPhone] = useState('');
-  const [requestId, setRequestId] = useState('');
-  const [code, setCode] = useState('');
+  const [sbd, setSbd] = useState('');
+  const [password, setPassword] = useState('');
+  const [major, setMajor] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const requestOtp = async (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
     try {
-      const res = await authApi.requestOtp(studentCode.trim(), phone.trim());
-      setRequestId(res.requestId);
-      setStep('verify');
+      afterLogin(await authApi.prospectiveLogin(sbd.trim(), password, major.trim()));
     } catch (err) {
       setError((err as Error).message);
     } finally {
       setLoading(false);
     }
   };
-
-  const verifyOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
-    try {
-      const res = await authApi.verifyOtp(requestId, code.trim());
-      afterLogin(res);
-    } catch (err) {
-      setError((err as Error).message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (step === 'verify') {
-    return (
-      <form onSubmit={verifyOtp} className="space-y-3">
-        <p className="text-sm text-slate-500">
-          Mã OTP đã gửi tới <strong>{phone}</strong>. (Bản dev: xem mã ở console API)
-        </p>
-        <Input label="Mã OTP" value={code} onChange={setCode} placeholder="6 chữ số" />
-        {error && <ErrorText>{error}</ErrorText>}
-        <SubmitButton loading={loading}>Xác minh & đăng nhập</SubmitButton>
-        <button
-          type="button"
-          onClick={() => setStep('request')}
-          className="w-full text-center text-sm text-slate-500 hover:text-brand"
-        >
-          ← Nhập lại MSSV/SĐT
-        </button>
-      </form>
-    );
-  }
 
   return (
-    <form onSubmit={requestOtp} className="space-y-3">
-      <Input label="Mã số sinh viên / SBD" value={studentCode} onChange={setStudentCode} placeholder="VD: 2024110001" />
-      <Input label="Số điện thoại" value={phone} onChange={setPhone} placeholder="0905xxxxxx" />
+    <form onSubmit={submit} className="space-y-3">
+      <p className="text-sm text-slate-500">Đăng nhập bằng tài khoản thí sinh tuyển sinh.</p>
+      <Input label="Số báo danh (SBD)" value={sbd} onChange={setSbd} placeholder="VD: DDN2025001" />
+      <Input label="Mật khẩu thí sinh" value={password} onChange={setPassword} type="password" />
+      <Input label="Ngành dự kiến nhập học" value={major} onChange={setMajor} placeholder="VD: Kiến trúc" />
       {error && <ErrorText>{error}</ErrorText>}
-      <SubmitButton loading={loading}>Gửi mã OTP</SubmitButton>
+      <Submit loading={loading}>Đăng nhập</Submit>
     </form>
   );
 }
 
-function PasswordLogin() {
+function StudentForm() {
+  const afterLogin = useAfterLogin();
+  const [code, setCode] = useState('');
+  const [dob, setDob] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    try {
+      afterLogin(await authApi.studentLogin(code.trim(), dob));
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <form onSubmit={submit} className="space-y-3">
+      <p className="text-sm text-slate-500">Mật khẩu là ngày sinh của bạn.</p>
+      <Input label="Mã số sinh viên" value={code} onChange={setCode} placeholder="VD: 2021120001" />
+      <Input label="Ngày sinh (mật khẩu)" value={dob} onChange={setDob} type="date" />
+      {error && <ErrorText>{error}</ErrorText>}
+      <Submit loading={loading}>Đăng nhập</Submit>
+    </form>
+  );
+}
+
+function StaffForm() {
   const afterLogin = useAfterLogin();
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
@@ -121,8 +147,7 @@ function PasswordLogin() {
     setError('');
     setLoading(true);
     try {
-      const res = await authApi.login(phone.trim(), password);
-      afterLogin(res);
+      afterLogin(await authApi.login(phone.trim(), password));
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -133,38 +158,10 @@ function PasswordLogin() {
   return (
     <form onSubmit={submit} className="space-y-3">
       <Input label="Số điện thoại" value={phone} onChange={setPhone} placeholder="0905xxxxxx" />
-      <Input
-        label="Mật khẩu"
-        value={password}
-        onChange={setPassword}
-        type="password"
-        placeholder="••••••"
-      />
+      <Input label="Mật khẩu" value={password} onChange={setPassword} type="password" />
       {error && <ErrorText>{error}</ErrorText>}
-      <SubmitButton loading={loading}>Đăng nhập</SubmitButton>
+      <Submit loading={loading}>Đăng nhập</Submit>
     </form>
-  );
-}
-
-function TabButton({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`rounded-md py-2 font-medium transition ${
-        active ? 'bg-white text-brand shadow-sm' : 'text-slate-500'
-      }`}
-    >
-      {children}
-    </button>
   );
 }
 
@@ -190,22 +187,22 @@ function Input({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         required
-        className="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-brand"
+        className="w-full rounded-xl border border-slate-300 px-3 py-2.5 outline-none transition focus:border-brand focus:ring-2 focus:ring-brand-100"
       />
     </label>
   );
 }
 
 function ErrorText({ children }: { children: React.ReactNode }) {
-  return <p className="rounded bg-red-50 px-3 py-2 text-sm text-red-600">{children}</p>;
+  return <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{children}</p>;
 }
 
-function SubmitButton({ loading, children }: { loading: boolean; children: React.ReactNode }) {
+function Submit({ loading, children }: { loading: boolean; children: React.ReactNode }) {
   return (
     <button
       type="submit"
       disabled={loading}
-      className="w-full rounded-lg bg-brand py-2.5 font-semibold text-white disabled:opacity-60"
+      className="w-full rounded-xl bg-brand py-2.5 font-semibold text-white transition hover:bg-brand-dark disabled:opacity-60"
     >
       {loading ? 'Đang xử lý…' : children}
     </button>

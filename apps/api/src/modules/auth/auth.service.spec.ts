@@ -2,9 +2,9 @@
  * Unit test AuthService — mock toàn bộ phụ thuộc (KHÔNG cần MySQL).
  * Map test-case: DAL-2 (OTP), DAL-3 (đăng ký chủ trọ).
  */
-import { BadRequestException, ConflictException } from '@nestjs/common';
+import { BadRequestException, ConflictException, UnauthorizedException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
-import { UserRole, UserStatus } from '../../common/enums';
+import { StudentType, UserRole, UserStatus } from '../../common/enums';
 import { AuthService } from './auth.service';
 
 describe('AuthService', () => {
@@ -12,7 +12,18 @@ describe('AuthService', () => {
 
   // --- mocks ---
   const otpRepo = { create: jest.fn((x) => x), save: jest.fn(), findOne: jest.fn() };
-  const userRepo = { findOne: jest.fn() };
+  const userRepo = {
+    findOne: jest.fn(),
+    create: jest.fn((x) => x),
+    save: jest.fn(async (x) => ({ id: '1', ...x })),
+  };
+  const studentProfileRepo = {
+    findOne: jest.fn(async () => null),
+    create: jest.fn((x) => x),
+    save: jest.fn(async (x) => x),
+  };
+  const admissionRepo = { findOne: jest.fn() };
+  const studentRecordRepo = { findOne: jest.fn() };
   const usersService = {
     findByPhone: jest.fn(),
     findOrCreateStudent: jest.fn(),
@@ -38,6 +49,9 @@ describe('AuthService', () => {
     service = new AuthService(
       otpRepo as never,
       userRepo as never,
+      studentProfileRepo as never,
+      admissionRepo as never,
+      studentRecordRepo as never,
       usersService as never,
       otpService as never,
       jwtService as never,
@@ -123,6 +137,69 @@ describe('AuthService', () => {
       await expect(service.verifyOtp({ requestId: 'x', code: '123456' })).rejects.toBeInstanceOf(
         BadRequestException,
       );
+    });
+  });
+
+  describe('prospectiveLogin (Tân SV)', () => {
+    it('Happy: SBD + mật khẩu đúng → tạo SV PROSPECTIVE + ngành dự kiến', async () => {
+      admissionRepo.findOne.mockResolvedValue({
+        sbd: 'DDN2025001',
+        fullName: 'Trần Tân Sinh',
+        passwordHash: await bcrypt.hash('ThiSinh@123', 10),
+      });
+      userRepo.findOne.mockResolvedValue(null);
+
+      const res = await service.prospectiveLogin({
+        sbd: 'DDN2025001',
+        password: 'ThiSinh@123',
+        intendedMajor: 'Kiến trúc',
+      });
+
+      expect(res.user.role).toBe(UserRole.STUDENT);
+      expect(res.tokens.accessToken).toBeTruthy();
+      // student_profile được lưu với type PROSPECTIVE
+      const saved = studentProfileRepo.save.mock.calls[0][0];
+      expect(saved.studentType).toBe(StudentType.PROSPECTIVE);
+      expect(saved.intendedMajor).toBe('Kiến trúc');
+    });
+
+    it('Error: sai mật khẩu → Unauthorized', async () => {
+      admissionRepo.findOne.mockResolvedValue({
+        sbd: 'DDN2025001',
+        fullName: 'X',
+        passwordHash: await bcrypt.hash('khac', 10),
+      });
+      await expect(
+        service.prospectiveLogin({ sbd: 'DDN2025001', password: 'sai', intendedMajor: 'A' }),
+      ).rejects.toBeInstanceOf(UnauthorizedException);
+    });
+  });
+
+  describe('studentLogin (SV trường)', () => {
+    it('Happy: MSSV + ngày sinh đúng → tạo SV CURRENT', async () => {
+      studentRecordRepo.findOne.mockResolvedValue({
+        studentCode: '2021120001',
+        fullName: 'Nguyễn Văn Kiến',
+        major: 'Kiến trúc',
+        dateOfBirth: '2003-05-12',
+      });
+      userRepo.findOne.mockResolvedValue(null);
+
+      const res = await service.studentLogin({ studentCode: '2021120001', dob: '2003-05-12' });
+      expect(res.user.role).toBe(UserRole.STUDENT);
+      const saved = studentProfileRepo.save.mock.calls[0][0];
+      expect(saved.studentType).toBe(StudentType.CURRENT);
+    });
+
+    it('Error: sai ngày sinh → Unauthorized', async () => {
+      studentRecordRepo.findOne.mockResolvedValue({
+        studentCode: '2021120001',
+        fullName: 'X',
+        dateOfBirth: '2003-05-12',
+      });
+      await expect(
+        service.studentLogin({ studentCode: '2021120001', dob: '2000-01-01' }),
+      ).rejects.toBeInstanceOf(UnauthorizedException);
     });
   });
 

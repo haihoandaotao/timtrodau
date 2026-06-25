@@ -1,13 +1,21 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --background: #ffffff;
+  --background: #f8fafc;
   --foreground: #0f172a;
 }
 
 body {
   color: var(--foreground);
   background: var(--background);
+  font-feature-settings: 'cv11', 'ss01';
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
 }
