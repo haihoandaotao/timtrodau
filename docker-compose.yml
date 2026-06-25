@@ -1,0 +1,22 @@
+# MySQL cho phát triển. Chạy: docker compose up -d
+# Sau đó cập nhật .env (DB_PASSWORD=devpass) rồi: npm run migration:run && npm run seed
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: dal-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: devpass
+      MYSQL_DATABASE: dau_accommodation
+    ports:
+      - '3306:3306'
+    volumes:
+      - dal_mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ['CMD', 'mysqladmin', 'ping', '-h', 'localhost', '-pdevpass']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  dal_mysql_data:

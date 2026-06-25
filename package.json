@@ -1,0 +1,21 @@
+{
+  "name": "dau-accommodation-link",
+  "version": "0.1.0",
+  "private": true,
+  "description": "DAU Accommodation Link - Hệ thống Hỗ trợ Tìm kiếm & Đăng ký Phòng trọ Tân sinh viên DAU",
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=apps/api & npm run dev --workspace=apps/web",
+    "dev:api": "npm run dev --workspace=apps/api",
+    "dev:web": "npm run dev --workspace=apps/web",
+    "build": "npm run build --workspace=apps/api && npm run build --workspace=apps/web",
+    "test": "npm run test --workspace=apps/api",
+    "test:e2e": "npm run test:e2e --workspace=apps/api",
+    "lint": "npm run lint --workspace=apps/api && npm run lint --workspace=apps/web"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
