@@ -47,7 +47,7 @@ export class Accommodation extends BaseEntity {
   @Column({ type: 'varchar', length: 255 })
   address: string;
 
-  @Index('idx_accommodations_area_id')
+  // area_id là FK → MySQL tự tạo index, không khai báo @Index trùng.
   @Column({ name: 'area_id', type: 'int', nullable: true })
   areaId: number | null;
 

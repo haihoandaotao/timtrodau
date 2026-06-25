@@ -87,7 +87,9 @@ export class AccommodationsService {
       );
     }
 
-    qb.orderBy('a.created_at', 'DESC')
+    // Dùng property name (a.createdAt) — bắt buộc khi phân trang + join
+    // collection để TypeORM map được column metadata (tránh lỗi databaseName).
+    qb.orderBy('a.createdAt', 'DESC')
       .skip((page - 1) * limit)
       .take(limit);
 
