@@ -1,9 +1,11 @@
 'use client';
 
 import { useMutation } from '@tanstack/react-query';
+import Link from 'next/link';
 import { useState } from 'react';
 import { bookingsApi, type BookingResult } from '@/lib/api/bookings';
 import { getAccessToken } from '@/lib/auth-token';
+import { useAuth } from '@/lib/auth-context';
 
 /**
  * Nút "Đăng ký giữ chỗ" (DAL-11).
@@ -17,6 +19,7 @@ export function BookingButton({
   disabled?: boolean;
 }) {
   const [result, setResult] = useState<BookingResult | null>(null);
+  const { user } = useAuth();
 
   const mutation = useMutation({
     mutationFn: () => {
@@ -56,6 +59,25 @@ export function BookingButton({
           )}
         </div>
       </div>
+    );
+  }
+
+  // Chưa đăng nhập SV → mời đăng nhập.
+  if (!user) {
+    return (
+      <Link
+        href="/login"
+        className="mt-5 block w-full rounded-lg bg-brand py-3 text-center font-semibold text-white"
+      >
+        Đăng nhập sinh viên để giữ chỗ
+      </Link>
+    );
+  }
+  if (user.role !== 'STUDENT') {
+    return (
+      <p className="mt-5 rounded-lg bg-slate-100 py-3 text-center text-sm text-slate-500">
+        Chỉ tài khoản sinh viên mới giữ chỗ được.
+      </p>
     );
   }
 

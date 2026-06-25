@@ -2,10 +2,10 @@
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState, type ReactNode } from 'react';
+import { AuthProvider } from '@/lib/auth-context';
 
 /**
- * Providers — bọc TanStack Query cho toàn app (server state).
- * Client state (Zustand/Context) sẽ thêm khi cần.
+ * Providers — bọc TanStack Query (server state) + AuthProvider (phiên đăng nhập).
  */
 export function Providers({ children }: { children: ReactNode }) {
   const [queryClient] = useState(
@@ -17,5 +17,9 @@ export function Providers({ children }: { children: ReactNode }) {
       }),
   );
 
-  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>{children}</AuthProvider>
+    </QueryClientProvider>
+  );
 }
