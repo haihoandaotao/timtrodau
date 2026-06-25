@@ -1,6 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
+import Link from 'next/link';
 import { healthApi } from '@/lib/api/health';
 
 /**
@@ -42,8 +43,15 @@ export default function HomePage() {
         )}
       </section>
 
+      <Link
+        href="/search"
+        className="block rounded-lg bg-brand py-3 text-center font-semibold text-white"
+      >
+        🔍 Tìm phòng trọ ngay
+      </Link>
+
       <p className="text-center text-xs text-slate-400">
-        Phase 1.1 — Scaffold hoàn tất. Các tính năng sẽ được bổ sung theo Implementation Plan.
+        DAU Accommodation Link — MVP đang phát triển theo Implementation Plan.
       </p>
     </main>
   );

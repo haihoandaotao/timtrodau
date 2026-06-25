@@ -1,11 +1,14 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
+import { ServeStaticModule } from '@nestjs/serve-static';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { join } from 'path';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 import { appConfig, dbConfig, jwtConfig, otpConfig, storageConfig } from './config/env.config';
 import { typeOrmModuleConfig } from './config/typeorm.module-config';
+import { AccommodationsModule } from './modules/accommodations/accommodations.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { HealthModule } from './modules/health/health.module';
 import { UsersModule } from './modules/users/users.module';
@@ -27,9 +30,19 @@ import { UsersModule } from './modules/users/users.module';
       inject: [ConfigService],
       useFactory: (config: ConfigService) => typeOrmModuleConfig(config),
     }),
+    ServeStaticModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => [
+        {
+          rootPath: join(process.cwd(), config.get<string>('storage.uploadDir') ?? 'uploads'),
+          serveRoot: '/uploads',
+        },
+      ],
+    }),
     HealthModule,
     UsersModule,
     AuthModule,
+    AccommodationsModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },
