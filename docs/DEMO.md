@@ -41,6 +41,15 @@ Trang `/login` cho **chọn đối tượng** trước:
 
 ---
 
+## Màn hình theo vai trò (cập nhật)
+- **Sinh viên**: `/search` (lọc + tải thêm) · `/rooms/[id]` (♥ lưu phòng, SĐT chủ trọ) · `/favorites` (đã lưu) · `/bookings` (lịch sử giữ chỗ) · `/roommates` (tìm bạn ở ghép) · `/profile`.
+- **Chủ trọ**: `/landlord` (đăng bài + **upload ảnh** + sửa/xoá + lý do bị từ chối + **quản lý lượt giữ chỗ** phòng mình) · `/profile` (đổi mật khẩu).
+- **Admin**: `/admin` (dashboard) · `/admin/moderation` (duyệt bài + **duyệt chủ trọ**) · `/admin/bookings` · `/admin/users` (khoá/mở) · `/admin/majors` (CRUD ngành).
+
+## Bảo mật & vận hành
+- Rate-limit đăng nhập 6 lần/phút (chống brute-force), helmet headers.
+- Auto-refresh token (không bị đăng xuất ngầm). Dockerfile + CI có sẵn.
+
 ## Khám phá API (Swagger)
 Mở **http://localhost:3001/api/v1/docs** — thử mọi endpoint, có example & mô tả. Bấm **Authorize** dán `accessToken` để gọi endpoint cần quyền.
 
