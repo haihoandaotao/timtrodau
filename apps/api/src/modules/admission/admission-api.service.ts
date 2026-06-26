@@ -9,17 +9,32 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AdmissionCandidate } from '../auth/entities/admission-candidate.entity';
 
-/** Một bản ghi thí sinh từ API tuyển sinh chính thức (rút gọn trường cần dùng). */
-interface OfficialCandidate {
-  candidate_code?: string;
-  id?: string;
-  full_name?: string;
-  email?: string | null;
-  phone?: string | null;
-  dob?: string | null;
-  primary_major?: { code?: string; name?: string } | null;
-  aspirations?: Array<{ name?: string }> | null;
+/** Trường lõi sau khi chuẩn hoá (hỗ trợ cả response phẳng lẫn bọc dauAffRaw). */
+export interface NormalizedCandidate {
+  candidateCode: string | null;
+  fullName: string;
+  email: string | null;
+  phone: string | null;
+  dob: string | null; // yyyy-mm-dd
+  intendedMajor: string | null;
 }
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+function normalize(row: any): NormalizedCandidate {
+  // API mới bọc { dauAffRaw, admissionMapping }; API cũ trả phẳng.
+  const r = row?.dauAffRaw ?? row ?? {};
+  const m = row?.admissionMapping ?? {};
+  const rawDob = r.dob ?? m.DateOfBirth ?? m.dob ?? null;
+  return {
+    candidateCode: row?.candidate_code ?? r.candidate_code ?? r.id ?? m.ApplicationNo ?? null,
+    fullName: r.full_name ?? m.FullName ?? 'Thí sinh',
+    email: r.email ?? m.Email ?? null,
+    phone: r.phone ?? m.Phone ?? null,
+    dob: rawDob ? String(rawDob).slice(0, 10) : null,
+    intendedMajor: r.primary_major?.name ?? r.aspirations?.[0]?.name ?? null,
+  };
+}
+/* eslint-enable @typescript-eslint/no-explicit-any */
 
 @Injectable()
 export class AdmissionApiService {
@@ -40,18 +55,47 @@ export class AdmissionApiService {
     return { configured: this.isConfigured(), syncedCount };
   }
 
+  private candidatesUrl(query: string): string {
+    const base = this.config.get<string>('admission.apiBaseUrl');
+    return `${base}/api/v1/integration/admission/candidates${query}`;
+  }
+
   /**
-   * Đồng bộ thí sinh chính thức về DB cục bộ theo phân trang JSON
-   * (theo recommended_fetch_flow). Tân SV sau đó đăng nhập đối chiếu DB này.
+   * Tra cứu trực tiếp 1 thí sinh theo email/SĐT (dùng tham số q của API) —
+   * phục vụ đăng nhập tân SV không cần đồng bộ trước. Trả null nếu không có.
+   */
+  async findByIdentifier(identifier: string): Promise<NormalizedCandidate | null> {
+    const apiKey = this.config.get<string>('admission.apiKey');
+    if (!apiKey) return null;
+    let res: Response;
+    try {
+      res = await fetch(this.candidatesUrl(`?q=${encodeURIComponent(identifier)}&limit=20`), {
+        headers: { 'x-api-key': apiKey, Accept: 'application/json' },
+      });
+    } catch (e) {
+      this.logger.warn(`Lỗi gọi API tuyển sinh: ${(e as Error).message}`);
+      return null;
+    }
+    if (!res.ok) {
+      this.logger.warn(`API tuyển sinh trả HTTP ${res.status}`);
+      return null;
+    }
+    const body = (await res.json()) as { data?: unknown[] };
+    const list = (body.data ?? []).map(normalize);
+    const id = identifier.trim().toLowerCase();
+    return list.find((c) => c.email?.toLowerCase() === id || c.phone === identifier.trim()) ?? null;
+  }
+
+  /**
+   * Đồng bộ thí sinh về DB cục bộ theo phân trang JSON (recommended_fetch_flow).
    */
   async sync(): Promise<{ synced: number; total: number }> {
     const apiKey = this.config.get<string>('admission.apiKey');
     if (!apiKey) {
       throw new BadRequestException(
-        'Chưa cấu hình ADMISSION_API_KEY — không thể đồng bộ với hệ thống tuyển sinh',
+        'Chưa cấu hình INTEGRATION_API_KEY — không thể đồng bộ với hệ thống tuyển sinh',
       );
     }
-    const base = this.config.get<string>('admission.apiBaseUrl');
     const limit = 500;
     let offset = 0;
     let synced = 0;
@@ -59,10 +103,11 @@ export class AdmissionApiService {
     let guard = 0;
 
     for (;;) {
-      const url = `${base}/official/admission-candidates?limit=${limit}&offset=${offset}`;
       let res: Response;
       try {
-        res = await fetch(url, { headers: { 'x-api-key': apiKey } });
+        res = await fetch(this.candidatesUrl(`?limit=${limit}&offset=${offset}`), {
+          headers: { 'x-api-key': apiKey, Accept: 'application/json' },
+        });
       } catch (e) {
         throw new ServiceUnavailableException(
           `Không kết nối được API tuyển sinh: ${(e as Error).message}`,
@@ -72,13 +117,13 @@ export class AdmissionApiService {
         throw new ServiceUnavailableException(`API tuyển sinh trả lỗi HTTP ${res.status}`);
       }
       const body = (await res.json()) as {
-        data?: OfficialCandidate[];
+        data?: unknown[];
         meta?: { total?: number; returned?: number; has_more?: boolean };
       };
       const rows = body.data ?? [];
       total = body.meta?.total ?? total;
       for (const c of rows) {
-        if (await this.upsert(c)) synced++;
+        if (await this.upsert(normalize(c))) synced++;
       }
       if (!body.meta?.has_more) break;
       offset += body.meta?.returned ?? rows.length;
@@ -91,33 +136,28 @@ export class AdmissionApiService {
   }
 
   /** Tạo/cập nhật 1 thí sinh; trả false nếu bỏ qua (thiếu dob hoặc trùng khoá). */
-  private async upsert(c: OfficialCandidate): Promise<boolean> {
-    const dob = c.dob ? String(c.dob).slice(0, 10) : null;
-    if (!dob) return false; // không có ngày sinh → không thể đăng nhập, bỏ qua
-    const code = c.candidate_code ?? c.id ?? null;
-    const email = c.email ?? null;
-    const phone = c.phone ?? null;
-    const intendedMajor = c.primary_major?.name ?? c.aspirations?.[0]?.name ?? null;
-
+  async upsert(c: NormalizedCandidate): Promise<boolean> {
+    if (!c.dob) return false; // không có ngày sinh → không thể đăng nhập, bỏ qua
     let row: AdmissionCandidate | null = null;
-    if (code) row = await this.repo.findOne({ where: { candidateCode: code } });
-    if (!row && email) row = await this.repo.findOne({ where: { email } });
-    if (!row && phone) row = await this.repo.findOne({ where: { phone } });
+    if (c.candidateCode)
+      row = await this.repo.findOne({ where: { candidateCode: c.candidateCode } });
+    if (!row && c.email) row = await this.repo.findOne({ where: { email: c.email } });
+    if (!row && c.phone) row = await this.repo.findOne({ where: { phone: c.phone } });
     if (!row) row = this.repo.create({ isSelfRegistered: false });
 
-    row.candidateCode = code;
-    row.fullName = c.full_name ?? row.fullName ?? 'Thí sinh';
-    row.email = email;
-    row.phone = phone;
-    row.dateOfBirth = dob;
-    row.intendedMajor = intendedMajor;
+    row.candidateCode = c.candidateCode;
+    row.fullName = c.fullName ?? row.fullName ?? 'Thí sinh';
+    row.email = c.email;
+    row.phone = c.phone;
+    row.dateOfBirth = c.dob;
+    row.intendedMajor = c.intendedMajor;
     row.isSelfRegistered = false;
 
     try {
       await this.repo.save(row);
       return true;
     } catch (e) {
-      this.logger.warn(`Bỏ qua thí sinh ${code}: ${(e as Error).message}`);
+      this.logger.warn(`Bỏ qua thí sinh ${c.candidateCode}: ${(e as Error).message}`);
       return false;
     }
   }

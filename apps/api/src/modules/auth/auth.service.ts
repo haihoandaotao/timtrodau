@@ -12,6 +12,7 @@ import * as bcrypt from 'bcrypt';
 import { DataSource, Repository } from 'typeorm';
 import { StudentType, UserRole, UserStatus, VerifyStatus } from '../../common/enums';
 import { AuthUser, JwtPayload } from '../../common/interfaces/jwt-payload.interface';
+import { AdmissionApiService } from '../admission/admission-api.service';
 import { OtpService } from '../notify/otp.service';
 import { User } from '../users/entities/user.entity';
 import { LandlordProfile } from '../users/entities/landlord-profile.entity';
@@ -59,25 +60,54 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly config: ConfigService,
     private readonly dataSource: DataSource,
+    private readonly admissionApi: AdmissionApiService,
   ) {}
 
   // ---------- SV: đăng nhập theo đối tượng (mock hệ thống ngoài) ----------
 
-  /** Tân sinh viên: đăng nhập bằng email/SĐT + ngày sinh (mật khẩu). */
+  /**
+   * Tân sinh viên: đăng nhập bằng email/SĐT + ngày sinh (mật khẩu).
+   * Ưu tiên DB cục bộ (đã sync/mock); nếu không có → tra cứu trực tiếp API
+   * tuyển sinh theo tham số q (khi đã cấu hình INTEGRATION_API_KEY).
+   */
   async prospectiveLogin(
     dto: ProspectiveLoginDto,
   ): Promise<{ tokens: AuthTokens; user: SafeUser }> {
-    const cand = await this.admissionRepo.findOne({
+    const local = await this.admissionRepo.findOne({
       where: [{ email: dto.identifier }, { phone: dto.identifier }],
     });
-    const candDob = cand ? String(cand.dateOfBirth).slice(0, 10) : null;
-    if (!cand || candDob !== dto.dob) {
+    let resolved: {
+      email: string | null;
+      phone: string | null;
+      fullName: string;
+      dob: string | null;
+      intendedMajor: string | null;
+    } | null = local
+      ? {
+          email: local.email,
+          phone: local.phone,
+          fullName: local.fullName,
+          dob: String(local.dateOfBirth).slice(0, 10),
+          intendedMajor: local.intendedMajor,
+        }
+      : null;
+
+    if (!resolved) {
+      const remote = await this.admissionApi.findByIdentifier(dto.identifier);
+      if (remote) {
+        await this.admissionApi.upsert(remote); // cache về DB cục bộ
+        resolved = remote;
+      }
+    }
+
+    if (!resolved || resolved.dob !== dto.dob) {
       throw new UnauthorizedException('Sai email/SĐT hoặc ngày sinh');
     }
-    const user = await this.upsertStudent({ email: cand.email, phone: cand.phone }, cand.fullName, {
-      studentType: StudentType.PROSPECTIVE,
-      intendedMajor: cand.intendedMajor ?? undefined,
-    });
+    const user = await this.upsertStudent(
+      { email: resolved.email, phone: resolved.phone },
+      resolved.fullName,
+      { studentType: StudentType.PROSPECTIVE, intendedMajor: resolved.intendedMajor ?? undefined },
+    );
     return { tokens: await this.buildTokens(user), user: this.sanitize(user) };
   }
 

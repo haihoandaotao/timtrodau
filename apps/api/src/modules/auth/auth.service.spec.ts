@@ -41,6 +41,7 @@ describe('AuthService', () => {
   };
   const jwtService = { signAsync: jest.fn(async () => 'signed.jwt.token'), verifyAsync: jest.fn() };
   const config = { get: jest.fn(() => 'secret') };
+  const admissionApi = { findByIdentifier: jest.fn(async () => null), upsert: jest.fn() };
   const dataSource = {
     transaction: jest.fn(async (cb) =>
       cb({
@@ -63,6 +64,7 @@ describe('AuthService', () => {
       jwtService as never,
       config as never,
       dataSource as never,
+      admissionApi as never,
     );
   });
 

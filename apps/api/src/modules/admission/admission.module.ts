@@ -8,5 +8,6 @@ import { AdmissionController } from './admission.controller';
   imports: [TypeOrmModule.forFeature([AdmissionCandidate])],
   controllers: [AdmissionController],
   providers: [AdmissionApiService],
+  exports: [AdmissionApiService],
 })
 export class AdmissionModule {}
