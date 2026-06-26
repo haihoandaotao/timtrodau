@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { useMobileNav } from '@/lib/mobile-nav';
+import { Icon } from './icons';
 
 interface NavItem {
   href: string;
@@ -16,8 +17,8 @@ function navFor(role?: string): { group: string; items: NavItem[] }[] {
     {
       group: 'Chung',
       items: [
-        { href: '/', label: 'Trang chủ', icon: '🏠' },
-        { href: '/search', label: 'Tìm phòng', icon: '🔍' },
+        { href: '/', label: 'Trang chủ', icon: 'home' },
+        { href: '/search', label: 'Tìm phòng', icon: 'search' },
       ],
     },
   ];
@@ -25,30 +26,30 @@ function navFor(role?: string): { group: string; items: NavItem[] }[] {
     groups.push({
       group: 'Sinh viên',
       items: [
-        { href: '/roommates', label: 'Tìm bạn ở ghép', icon: '👥' },
-        { href: '/favorites', label: 'Phòng đã lưu', icon: '❤️' },
-        { href: '/bookings', label: 'Lịch sử giữ chỗ', icon: '📝' },
+        { href: '/roommates', label: 'Tìm bạn ở ghép', icon: 'users' },
+        { href: '/favorites', label: 'Phòng đã lưu', icon: 'heart' },
+        { href: '/bookings', label: 'Lịch sử giữ chỗ', icon: 'clipboard' },
       ],
     });
   }
   if (role === 'LANDLORD') {
-    groups.push({ group: 'Chủ trọ', items: [{ href: '/landlord', label: 'Quản lý cho thuê', icon: '🏢' }] });
+    groups.push({ group: 'Chủ trọ', items: [{ href: '/landlord', label: 'Quản lý cho thuê', icon: 'building' }] });
   }
   if (role === 'ADMIN') {
     groups.push({
       group: 'Quản trị',
       items: [
-        { href: '/admin', label: 'Tổng quan', icon: '📊' },
-        { href: '/admin/moderation', label: 'Duyệt tin', icon: '✅' },
-        { href: '/admin/bookings', label: 'Quản lý giữ chỗ', icon: '📋' },
-        { href: '/admin/users', label: 'Người dùng', icon: '👤' },
-        { href: '/admin/majors', label: 'Cấu hình Ngành', icon: '🎓' },
-        { href: '/admin/areas', label: 'Cấu hình Phường/xã', icon: '📍' },
+        { href: '/admin', label: 'Tổng quan', icon: 'grid' },
+        { href: '/admin/moderation', label: 'Duyệt tin', icon: 'check' },
+        { href: '/admin/bookings', label: 'Quản lý giữ chỗ', icon: 'list' },
+        { href: '/admin/users', label: 'Người dùng', icon: 'user' },
+        { href: '/admin/majors', label: 'Cấu hình Ngành', icon: 'cap' },
+        { href: '/admin/areas', label: 'Cấu hình Phường/xã', icon: 'pin' },
       ],
     });
   }
   if (role) {
-    groups.push({ group: 'Tài khoản', items: [{ href: '/profile', label: 'Hồ sơ cá nhân', icon: '⚙️' }] });
+    groups.push({ group: 'Tài khoản', items: [{ href: '/profile', label: 'Hồ sơ cá nhân', icon: 'gear' }] });
   }
   return groups;
 }
@@ -63,7 +64,8 @@ export function Sidebar() {
     <div className="flex h-full flex-col bg-brand-gradient text-white">
       {/* Logo */}
       <Link href="/" onClick={() => setOpen(false)} className="flex items-center gap-2.5 px-5 py-4">
-        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-base font-extrabold text-brand">D</span>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/logo.svg" alt="KTĐ" className="h-10 w-10 rounded-xl bg-white object-contain p-1" />
         <span className="text-lg font-bold leading-tight">
           DAU<br />
           <span className="text-xs font-medium text-white/70">Hệ thống tìm trọ</span>
@@ -87,7 +89,7 @@ export function Sidebar() {
                       active ? 'bg-white/20 font-semibold text-white shadow-sm' : 'text-white/85 hover:bg-white/10'
                     }`}
                   >
-                    <span className="text-base">{it.icon}</span>
+                    <Icon name={it.icon} />
                     {it.label}
                   </Link>
                 );
@@ -99,15 +101,9 @@ export function Sidebar() {
 
       {/* Footer */}
       <div className="border-t border-white/15 p-3">
-        {user ? (
-          <button type="button" onClick={() => { signOut(); setOpen(false); }} className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-white/85 transition hover:bg-white/10">
-            <span className="text-base">🔓</span> Đăng xuất
-          </button>
-        ) : (
-          <Link href="/login" onClick={() => setOpen(false)} className="block rounded-lg bg-white px-3 py-2.5 text-center text-sm font-semibold text-brand">
-            Đăng nhập
-          </Link>
-        )}
+        <button type="button" onClick={() => { signOut(); setOpen(false); }} className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-white/85 transition hover:bg-white/10">
+          <Icon name="logout" /> Đăng xuất
+        </button>
       </div>
     </div>
   );
