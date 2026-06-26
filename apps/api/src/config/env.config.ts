@@ -35,8 +35,10 @@ export const otpConfig = registerAs('otp', () => ({
 }));
 
 export const admissionConfig = registerAs('admission', () => ({
-  // Theo ADMISSION_INTEGRATION_API.md: base dev-api, header x-api-key = INTEGRATION_API_KEY.
-  apiBaseUrl: process.env.INTEGRATION_API_BASE_URL ?? 'https://dev-api.ktd.edu.vn',
+  // Header x-api-key = INTEGRATION_API_KEY. Base gồm /api/v1/integration;
+  // endpoint chính thức: /official/admission-candidates.
+  apiBaseUrl:
+    process.env.INTEGRATION_API_BASE_URL ?? 'https://aff-api.ktd.edu.vn/api/v1/integration',
   apiKey: process.env.INTEGRATION_API_KEY ?? process.env.ADMISSION_API_KEY ?? '',
 }));
 

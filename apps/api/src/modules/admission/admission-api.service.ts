@@ -101,8 +101,9 @@ export class AdmissionApiService {
   }
 
   private candidatesUrl(query: string): string {
+    // base đã gồm .../api/v1/integration → endpoint chính thức /official/admission-candidates
     const base = this.config.get<string>('admission.apiBaseUrl');
-    return `${base}/api/v1/integration/admission/candidates${query}`;
+    return `${base}/official/admission-candidates${query}`;
   }
 
   /**
