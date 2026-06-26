@@ -8,10 +8,9 @@ import { Card } from '@/components/ui';
 export default function LandlordRegisterPage() {
   const [form, setForm] = useState({
     fullName: '',
+    email: '',
     phone: '',
     password: '',
-    idCardNo: '',
-    address: '',
   });
   const [done, setDone] = useState(false);
   const [error, setError] = useState('');
@@ -25,7 +24,12 @@ export default function LandlordRegisterPage() {
     setError('');
     setLoading(true);
     try {
-      await authApi.landlordRegister({ ...form, phone: form.phone.trim() });
+      await authApi.landlordRegister({
+        fullName: form.fullName,
+        email: form.email.trim(),
+        password: form.password,
+        phone: form.phone.trim() || undefined,
+      });
       setDone(true);
     } catch (err) {
       setError((err as Error).message);
@@ -59,21 +63,18 @@ export default function LandlordRegisterPage() {
     <main className="mx-auto max-w-md px-4 py-8">
       <h1 className="text-center text-2xl font-extrabold text-slate-800">Đăng ký chủ trọ</h1>
       <p className="mb-6 mt-1 text-center text-sm text-slate-500">
-        Cung cấp thông tin liên hệ để Ban quản trị xác minh
+        Đăng ký bằng Gmail — thông tin chỗ trọ sẽ hoàn thiện sau khi đăng nhập
       </p>
       <Card className="p-5">
         <form onSubmit={submit} className="space-y-3">
           <Field label="Họ tên người quản lý">
             <input className="inp" value={form.fullName} onChange={set('fullName')} required />
           </Field>
-          <Field label="Số điện thoại liên hệ">
-            <input className="inp" value={form.phone} onChange={set('phone')} placeholder="0905xxxxxx" required />
+          <Field label="Email (Gmail) — dùng để đăng nhập">
+            <input className="inp" type="email" value={form.email} onChange={set('email')} placeholder="ten@gmail.com" required />
           </Field>
-          <Field label="Địa chỉ chỗ lưu trú">
-            <input className="inp" value={form.address} onChange={set('address')} placeholder="Số nhà, đường, phường, quận" required />
-          </Field>
-          <Field label="Số CCCD (để xác minh)">
-            <input className="inp" value={form.idCardNo} onChange={set('idCardNo')} required />
+          <Field label="Số điện thoại (tuỳ chọn)">
+            <input className="inp" value={form.phone} onChange={set('phone')} placeholder="0905xxxxxx" />
           </Field>
           <Field label="Mật khẩu">
             <input className="inp" type="password" value={form.password} onChange={set('password')} required />

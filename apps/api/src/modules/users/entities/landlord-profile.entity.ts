@@ -19,14 +19,20 @@ export class LandlordProfile {
   @JoinColumn({ name: 'user_id' })
   user: User;
 
-  @Column({ name: 'id_card_no', type: 'varchar', length: 20 })
-  idCardNo: string; // CCCD
+  @Column({ name: 'id_card_no', type: 'varchar', length: 20, nullable: true })
+  idCardNo: string | null; // CCCD (có thể bổ sung sau khi đăng ký Gmail)
 
   @Column({ name: 'id_card_image_url', type: 'varchar', length: 255, nullable: true })
   idCardImageUrl: string | null;
 
-  @Column({ type: 'varchar', length: 255 })
-  address: string;
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  address: string | null;
+
+  @Column({ name: 'representative_name', type: 'varchar', length: 191, nullable: true })
+  representativeName: string | null; // người đại diện
+
+  @Column({ name: 'representative_photo_url', type: 'varchar', length: 255, nullable: true })
+  representativePhotoUrl: string | null; // ảnh mặt đại diện
 
   @Column({ name: 'is_trusted', type: 'boolean', default: false })
   isTrusted: boolean; // cờ uy tín do Admin set

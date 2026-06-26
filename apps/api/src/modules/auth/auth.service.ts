@@ -229,8 +229,10 @@ export class AuthService {
   // ---------- Chủ trọ: đăng ký + đăng nhập ----------
 
   async registerLandlord(dto: LandlordRegisterDto): Promise<SafeUser> {
-    const existing = await this.usersService.findByPhone(dto.phone);
-    if (existing) {
+    if (await this.usersService.findByEmail(dto.email)) {
+      throw new ConflictException('Email đã được đăng ký');
+    }
+    if (dto.phone && (await this.usersService.findByPhone(dto.phone))) {
       throw new ConflictException('Số điện thoại đã được đăng ký');
     }
 
@@ -240,7 +242,8 @@ export class AuthService {
       const created = await manager.save(
         manager.create(User, {
           fullName: dto.fullName,
-          phone: dto.phone,
+          email: dto.email,
+          phone: dto.phone ?? null,
           passwordHash,
           role: UserRole.LANDLORD,
           status: UserStatus.PENDING, // chờ Admin duyệt
@@ -249,9 +252,7 @@ export class AuthService {
       await manager.save(
         manager.create(LandlordProfile, {
           userId: created.id,
-          idCardNo: dto.idCardNo,
-          idCardImageUrl: dto.idCardImageUrl ?? null,
-          address: dto.address,
+          representativeName: dto.fullName,
           verifyStatus: VerifyStatus.PENDING,
         }),
       );
@@ -262,9 +263,9 @@ export class AuthService {
   }
 
   async login(dto: LoginDto): Promise<{ tokens: AuthTokens; user: SafeUser }> {
-    const user = await this.usersService.findByPhone(dto.phone);
+    const user = await this.usersService.findByIdentifier(dto.identifier);
     if (!user || !user.passwordHash) {
-      throw new UnauthorizedException('Sai số điện thoại hoặc mật khẩu');
+      throw new UnauthorizedException('Sai email/SĐT hoặc mật khẩu');
     }
     const matched = await bcrypt.compare(dto.password, user.passwordHash);
     if (!matched) {

@@ -1,12 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { IsString, Matches, MinLength } from 'class-validator';
+import { IsString, MinLength } from 'class-validator';
 
 export class LoginDto {
-  @ApiProperty({ example: '0905123456', description: 'Số điện thoại (chủ trọ/admin)' })
+  @ApiProperty({ example: 'chutro@gmail.com', description: 'Email hoặc số điện thoại' })
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
-  @Matches(/^0\d{9}$/, { message: 'Số điện thoại không hợp lệ' })
-  phone: string;
+  @IsString()
+  identifier: string;
 
   @ApiProperty({ example: 'MatKhau@123', description: 'Mật khẩu' })
   @IsString()

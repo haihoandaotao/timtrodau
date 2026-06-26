@@ -39,10 +39,9 @@ export interface ProspectiveRegisterPayload {
 
 export interface LandlordRegisterPayload {
   fullName: string;
-  phone: string;
+  email: string;
   password: string;
-  idCardNo: string;
-  address: string;
+  phone?: string;
 }
 
 export const authApi = {
@@ -67,11 +66,11 @@ export const authApi = {
       body: JSON.stringify({ studentCode, dob }),
     }),
 
-  /** Chủ trọ / Admin: SĐT + mật khẩu. */
-  login: (phone: string, password: string) =>
+  /** Chủ trọ / Admin: email hoặc SĐT + mật khẩu. */
+  login: (identifier: string, password: string) =>
     apiFetch<LoginResult>('/auth/login', {
       method: 'POST',
-      body: JSON.stringify({ phone, password }),
+      body: JSON.stringify({ identifier, password }),
     }),
 
   /** Đăng ký tài khoản chủ trọ (chờ duyệt). */

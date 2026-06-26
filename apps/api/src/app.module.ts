@@ -15,6 +15,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { BookingsModule } from './modules/bookings/bookings.module';
 import { FavoritesModule } from './modules/favorites/favorites.module';
 import { HealthModule } from './modules/health/health.module';
+import { LandlordModule } from './modules/landlord/landlord.module';
 import { MajorsModule } from './modules/majors/majors.module';
 import { ModerationModule } from './modules/moderation/moderation.module';
 import { RoommateModule } from './modules/roommate/roommate.module';
@@ -60,6 +61,7 @@ import { UsersModule } from './modules/users/users.module';
     MajorsModule,
     FavoritesModule,
     AreasModule,
+    LandlordModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

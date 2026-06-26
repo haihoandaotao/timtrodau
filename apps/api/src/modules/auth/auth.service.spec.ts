@@ -30,6 +30,8 @@ describe('AuthService', () => {
   const studentRecordRepo = { findOne: jest.fn() };
   const usersService = {
     findByPhone: jest.fn(),
+    findByEmail: jest.fn(),
+    findByIdentifier: jest.fn(),
     findOrCreateStudent: jest.fn(),
   };
   const otpService = {
@@ -234,16 +236,15 @@ describe('AuthService', () => {
     });
   });
 
-  describe('registerLandlord (DAL-3)', () => {
+  describe('registerLandlord (DAL-3, Gmail)', () => {
     const dto = {
       fullName: 'Nguyễn Văn A',
-      phone: '0905123456',
+      email: 'chutro@gmail.com',
       password: 'MatKhau@123',
-      idCardNo: '048201001234',
-      address: '123 Hòa Xuân',
     };
 
-    it('T3-H1 (Happy): tạo LANDLORD status=PENDING', async () => {
+    it('T3-H1 (Happy): đăng ký Gmail → LANDLORD status=PENDING', async () => {
+      usersService.findByEmail.mockResolvedValue(null);
       usersService.findByPhone.mockResolvedValue(null);
       const res = await service.registerLandlord(dto);
 
@@ -252,8 +253,8 @@ describe('AuthService', () => {
       expect(dataSource.transaction).toHaveBeenCalledTimes(1); // T3-I1: trong transaction
     });
 
-    it('T3-X2 (Error): SĐT trùng → Conflict', async () => {
-      usersService.findByPhone.mockResolvedValue({ id: '1' });
+    it('T3-X2 (Error): email trùng → Conflict', async () => {
+      usersService.findByEmail.mockResolvedValue({ id: '1' });
       await expect(service.registerLandlord(dto)).rejects.toBeInstanceOf(ConflictException);
     });
   });

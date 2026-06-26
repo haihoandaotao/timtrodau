@@ -73,6 +73,15 @@ export class UsersService {
     return this.userRepo.findOne({ where: { phone } });
   }
 
+  findByEmail(email: string): Promise<User | null> {
+    return this.userRepo.findOne({ where: { email } });
+  }
+
+  /** Tìm theo email hoặc SĐT (đăng nhập bằng 1 trong 2). */
+  findByIdentifier(identifier: string): Promise<User | null> {
+    return this.userRepo.findOne({ where: [{ email: identifier }, { phone: identifier }] });
+  }
+
   findById(id: string): Promise<User | null> {
     return this.userRepo.findOne({ where: { id } });
   }

@@ -142,7 +142,7 @@ function StudentForm() {
 
 function StaffForm() {
   const afterLogin = useAfterLogin();
-  const [phone, setPhone] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -152,7 +152,7 @@ function StaffForm() {
     setError('');
     setLoading(true);
     try {
-      afterLogin(await authApi.login(phone.trim(), password));
+      afterLogin(await authApi.login(identifier.trim(), password));
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -162,7 +162,7 @@ function StaffForm() {
 
   return (
     <form onSubmit={submit} className="space-y-3">
-      <Input label="Số điện thoại" value={phone} onChange={setPhone} placeholder="0905xxxxxx" />
+      <Input label="Email hoặc số điện thoại" value={identifier} onChange={setIdentifier} placeholder="email@gmail.com / 0905xxxxxx" />
       <Input label="Mật khẩu" value={password} onChange={setPassword} type="password" />
       {error && <ErrorText>{error}</ErrorText>}
       <Submit loading={loading}>Đăng nhập</Submit>

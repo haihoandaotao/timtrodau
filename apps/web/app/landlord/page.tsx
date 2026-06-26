@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import type { Accommodation } from '@/lib/api/accommodations';
 import { landlordApi } from '@/lib/api/landlord';
+import { landlordProfileApi } from '@/lib/api/landlord-profile';
 import { useAuth } from '@/lib/auth-context';
 import { ACCOMMODATION_TYPE_LABEL, formatVnd } from '@/lib/format';
 import { AccommodationForm } from '@/components/AccommodationForm';
@@ -60,6 +61,9 @@ export default function LandlordPage() {
   return (
     <main className="mx-auto max-w-3xl px-4 py-6">
       <h1 className="mb-4 text-2xl font-extrabold text-slate-800">Quản lý cho thuê</h1>
+
+      {/* Hồ sơ chỗ trọ */}
+      <ProfileCard />
 
       {/* Thống kê */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -130,6 +134,95 @@ export default function LandlordPage() {
         )}
       </div>
     </main>
+  );
+}
+
+function ProfileCard() {
+  const queryClient = useQueryClient();
+  const { data } = useQuery({ queryKey: ['landlord', 'profile'], queryFn: landlordProfileApi.getMine });
+  const [form, setForm] = useState({ representativeName: '', phone: '', address: '' });
+  const [editing, setEditing] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [msg, setMsg] = useState('');
+
+  // Đồng bộ form khi tải xong (1 lần).
+  if (data && !editing && form.representativeName === '' && form.phone === '' && form.address === '') {
+    if (data.representativeName || data.phone || data.address) {
+      setForm({
+        representativeName: data.representativeName ?? '',
+        phone: data.phone ?? '',
+        address: data.address ?? '',
+      });
+    }
+  }
+
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ['landlord', 'profile'] });
+  const save = useMutation({
+    mutationFn: () => landlordProfileApi.update(form),
+    onSuccess: () => { setMsg('Đã lưu hồ sơ.'); setEditing(false); invalidate(); },
+  });
+
+  const uploadPhoto = async (file?: File | null) => {
+    if (!file) return;
+    setUploading(true);
+    try {
+      await landlordProfileApi.uploadPhoto(file);
+      invalidate();
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const incomplete = data && !data.completed;
+
+  return (
+    <Card className={`mb-6 p-5 ${incomplete ? 'ring-2 ring-amber-300' : ''}`}>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-bold text-slate-800">Hồ sơ chỗ trọ</h2>
+          {incomplete && (
+            <p className="mt-0.5 text-sm text-amber-600">⚠️ Vui lòng hoàn thiện thông tin để được duyệt.</p>
+          )}
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="h-14 w-14 overflow-hidden rounded-full bg-slate-100 ring-1 ring-slate-200">
+            {data?.representativePhotoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={`${API_ORIGIN}${data.representativePhotoUrl}`} alt="" className="h-full w-full object-cover" />
+            ) : (
+              <div className="flex h-full items-center justify-center text-[10px] text-slate-400">Ảnh</div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        <label className="block">
+          <span className="mb-1 block text-sm font-medium text-slate-700">Người đại diện</span>
+          <input className="inp" value={form.representativeName} onChange={(e) => { setForm({ ...form, representativeName: e.target.value }); setEditing(true); }} />
+        </label>
+        <label className="block">
+          <span className="mb-1 block text-sm font-medium text-slate-700">Số điện thoại liên hệ</span>
+          <input className="inp" value={form.phone} onChange={(e) => { setForm({ ...form, phone: e.target.value }); setEditing(true); }} placeholder="0905xxxxxx" />
+        </label>
+        <label className="block sm:col-span-2">
+          <span className="mb-1 block text-sm font-medium text-slate-700">Địa chỉ chỗ trọ</span>
+          <input className="inp" value={form.address} onChange={(e) => { setForm({ ...form, address: e.target.value }); setEditing(true); }} placeholder="Số nhà, đường, phường/xã, quận" />
+        </label>
+      </div>
+
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <button type="button" onClick={() => save.mutate()} disabled={save.isPending} className="rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">
+          {save.isPending ? 'Đang lưu…' : 'Lưu hồ sơ'}
+        </button>
+        <label className="cursor-pointer rounded-xl border border-slate-300 px-4 py-2 text-sm text-slate-600 hover:border-brand">
+          {uploading ? 'Đang tải…' : '📷 Ảnh mặt đại diện'}
+          <input type="file" accept="image/*" className="hidden" onChange={(e) => uploadPhoto(e.target.files?.[0])} />
+        </label>
+        {msg && <span className="text-sm text-green-700">{msg}</span>}
+        {data?.email && <span className="ml-auto text-xs text-slate-400">{data.email}</span>}
+      </div>
+    </Card>
   );
 }
 
