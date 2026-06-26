@@ -179,20 +179,45 @@ function StudentsTab() {
 
 /* ---------- Tab Tân sinh viên dự kiến (admission_candidates) ---------- */
 function ProspectiveTab() {
+  const queryClient = useQueryClient();
   const [qInput, setQInput] = useState('');
   const [q, setQ] = useState('');
   const [page, setPage] = useState(1);
+  const [syncMsg, setSyncMsg] = useState('');
 
   const stats = useQuery({ queryKey: ['admin', 'candidate-stats'], queryFn: adminApi.candidateStats });
   const list = useQuery({
     queryKey: ['admin', 'candidates', { q, page }],
     queryFn: () => adminApi.admissionCandidates({ q, page }),
   });
+  const sync = useMutation({
+    mutationFn: adminApi.admissionSync,
+    onSuccess: (r) => {
+      setSyncMsg(`Đã đồng bộ ${r.synced.toLocaleString('vi-VN')} thí sinh từ hệ thống tuyển sinh.`);
+      queryClient.invalidateQueries({ queryKey: ['admin', 'candidates'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'candidate-stats'] });
+    },
+    onError: (e) => setSyncMsg((e as Error).message),
+  });
   const maxMajor = Math.max(1, ...(stats.data?.byMajor.map((m) => m.count) ?? [1]));
   const meta = list.data?.meta;
 
   return (
     <>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <p className="text-sm text-slate-500">
+          {syncMsg || 'Dữ liệu lấy từ hệ thống tuyển sinh — bấm Đồng bộ để cập nhật mới nhất.'}
+        </p>
+        <button
+          type="button"
+          onClick={() => sync.mutate()}
+          disabled={sync.isPending}
+          className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+        >
+          {sync.isPending ? 'Đang đồng bộ…' : '↻ Đồng bộ tuyển sinh'}
+        </button>
+      </div>
+
       <div className="mb-4 grid grid-cols-2 gap-3">
         <StatCard label="Tổng Tân sinh viên dự kiến" value={stats.data?.total} />
         <StatCard label="Số ngành đăng ký" value={stats.data?.byMajor.length} />
