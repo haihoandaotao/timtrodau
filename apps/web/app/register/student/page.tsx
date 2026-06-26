@@ -62,10 +62,10 @@ export default function StudentRegisterPage() {
             <input className="inp" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
           </Field>
           <Field label="Email">
-            <input className="inp" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="(email hoặc SĐT)" />
+            <input className="inp" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
           </Field>
           <Field label="Số điện thoại">
-            <input className="inp" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(email hoặc SĐT)" />
+            <input className="inp" value={phone} onChange={(e) => setPhone(e.target.value)} />
           </Field>
           <Field label="Ngày sinh (sẽ là mật khẩu)">
             <input className="inp" type="date" value={dob} onChange={(e) => setDob(e.target.value)} required />
