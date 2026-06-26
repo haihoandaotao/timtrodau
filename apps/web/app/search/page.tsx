@@ -46,8 +46,9 @@ export default function SearchPage() {
   const filter: AccommodationFilter = useMemo(
     () => ({
       keyword: keyword.trim() || undefined,
-      ...PRICE_RANGES[priceIdx],
-      ...DISTANCES[distIdx],
+      priceMin: PRICE_RANGES[priceIdx].priceMin,
+      priceMax: PRICE_RANGES[priceIdx].priceMax,
+      distanceMax: DISTANCES[distIdx].distanceMax,
       type,
       areaId,
       amenityIds: amenityIds.length ? amenityIds : undefined,

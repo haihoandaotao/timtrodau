@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
-import { Header } from '@/components/Header';
+import { Sidebar } from '@/components/Sidebar';
 import { Providers } from './providers';
 
 export const metadata: Metadata = {
@@ -20,8 +20,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="vi">
       <body className="min-h-screen bg-slate-50 text-slate-900 antialiased">
         <Providers>
-          <Header />
-          {children}
+          <Sidebar />
+          <div className="lg:pl-60">{children}</div>
         </Providers>
       </body>
     </html>

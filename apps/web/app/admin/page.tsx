@@ -1,7 +1,6 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import Link from 'next/link';
 import { adminApi } from '@/lib/api/admin';
 
 /**
@@ -39,30 +38,13 @@ export default function AdminDashboard() {
     <main className="mx-auto max-w-3xl px-4 py-6">
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-xl font-bold text-brand">Dashboard quản trị</h1>
-        <div className="flex flex-wrap gap-2">
-          <Link href="/admin/moderation" className="rounded-lg border border-brand px-3 py-1.5 text-sm text-brand">
-            Duyệt tin
-          </Link>
-          <Link href="/admin/bookings" className="rounded-lg border border-brand px-3 py-1.5 text-sm text-brand">
-            Giữ chỗ
-          </Link>
-          <Link href="/admin/users" className="rounded-lg border border-brand px-3 py-1.5 text-sm text-brand">
-            Người dùng
-          </Link>
-          <Link href="/admin/majors" className="rounded-lg border border-brand px-3 py-1.5 text-sm text-brand">
-            Ngành
-          </Link>
-          <Link href="/admin/areas" className="rounded-lg border border-brand px-3 py-1.5 text-sm text-brand">
-            Phường/xã
-          </Link>
-          <button
-            type="button"
-            onClick={refreshAll}
-            className="rounded-lg bg-brand px-3 py-1.5 text-sm text-white"
-          >
-            ↻ Làm mới
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={refreshAll}
+          className="rounded-lg bg-brand px-3 py-1.5 text-sm text-white"
+        >
+          ↻ Làm mới
+        </button>
       </div>
 
       {overview.isError && (
