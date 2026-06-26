@@ -13,10 +13,14 @@ export default function AdminDashboard() {
     queryKey: ['admin', 'prices'],
     queryFn: adminApi.priceDistribution,
   });
-  const areas = useQuery({ queryKey: ['admin', 'areas'], queryFn: adminApi.areaDistribution });
+  const areas = useQuery({ queryKey: ['admin', 'areaDist'], queryFn: adminApi.areaDistribution });
   const trusted = useQuery({
     queryKey: ['admin', 'trusted'],
     queryFn: adminApi.trustedLandlords,
+  });
+  const byMajor = useQuery({
+    queryKey: ['admin', 'prospective-by-major'],
+    queryFn: adminApi.prospectiveByMajor,
   });
 
   const refreshAll = () => {
@@ -24,10 +28,12 @@ export default function AdminDashboard() {
     prices.refetch();
     areas.refetch();
     trusted.refetch();
+    byMajor.refetch();
   };
 
   const maxArea = Math.max(1, ...(areas.data?.map((a) => a.count) ?? [1]));
   const maxPrice = Math.max(1, ...(prices.data?.map((p) => p.count) ?? [1]));
+  const maxMajor = Math.max(1, ...(byMajor.data?.map((m) => m.count) ?? [1]));
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-6">
@@ -87,6 +93,17 @@ export default function AdminDashboard() {
           ))
         ) : (
           <p className="text-sm text-slate-400">Chưa có dữ liệu booking.</p>
+        )}
+      </Section>
+
+      {/* Tân sinh viên đã đăng ký theo ngành */}
+      <Section title="Tân sinh viên đã đăng ký theo ngành">
+        {byMajor.data && byMajor.data.length > 0 ? (
+          byMajor.data.map((m) => (
+            <BarRow key={m.major} label={m.major} value={m.count} max={maxMajor} />
+          ))
+        ) : (
+          <p className="text-sm text-slate-400">Chưa có tân sinh viên đăng ký.</p>
         )}
       </Section>
 

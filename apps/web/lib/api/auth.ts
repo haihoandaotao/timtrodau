@@ -34,6 +34,7 @@ export interface ProspectiveRegisterPayload {
   phone?: string;
   dob: string;
   intendedMajor: string;
+  enrollmentYear: number;
 }
 
 export interface LandlordRegisterPayload {

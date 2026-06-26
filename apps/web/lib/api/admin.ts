@@ -36,6 +36,10 @@ export const adminApi = {
     apiFetch<AreaCount[]>('/admin/stats/area-distribution', { headers: authHeaders() }),
   trustedLandlords: () =>
     apiFetch<TrustedLandlord[]>('/admin/stats/trusted-landlords', { headers: authHeaders() }),
+  prospectiveByMajor: () =>
+    apiFetch<Array<{ major: string; count: number }>>('/admin/stats/prospective-by-major', {
+      headers: authHeaders(),
+    }),
 
   // Moderation (DAL-13)
   pendingAccommodations: () =>

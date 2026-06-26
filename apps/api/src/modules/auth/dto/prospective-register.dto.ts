@@ -1,6 +1,16 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Transform } from 'class-transformer';
-import { IsEmail, IsString, Matches, MaxLength, MinLength, ValidateIf } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
+import {
+  IsEmail,
+  IsInt,
+  IsString,
+  Matches,
+  Max,
+  MaxLength,
+  Min,
+  MinLength,
+  ValidateIf,
+} from 'class-validator';
 
 /** Thí sinh tự đăng ký để đăng nhập (chưa có trong hệ thống tuyển sinh). */
 export class ProspectiveRegisterDto {
@@ -32,4 +42,11 @@ export class ProspectiveRegisterDto {
   @IsString()
   @MaxLength(100)
   intendedMajor: string;
+
+  @ApiProperty({ example: 2026, description: 'Năm dự kiến nhập học' })
+  @Type(() => Number)
+  @IsInt()
+  @Min(2020)
+  @Max(2100)
+  enrollmentYear: number;
 }

@@ -18,8 +18,11 @@ export default function StudentRegisterPage() {
   const [phone, setPhone] = useState('');
   const [dob, setDob] = useState('');
   const [major, setMajor] = useState('');
+  const [year, setYear] = useState(String(new Date().getFullYear()));
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const yearOptions = Array.from({ length: 4 }, (_, i) => new Date().getFullYear() + i);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,6 +39,7 @@ export default function StudentRegisterPage() {
         phone: phone.trim() || undefined,
         dob,
         intendedMajor: major,
+        enrollmentYear: Number(year),
       });
       signIn(res.tokens.accessToken, res.user, res.tokens.refreshToken);
       router.push('/search');
@@ -72,6 +76,15 @@ export default function StudentRegisterPage() {
               {majors?.map((m) => (
                 <option key={m.id} value={m.name}>
                   {m.name}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Năm nhập học">
+            <select className="inp" value={year} onChange={(e) => setYear(e.target.value)} required>
+              {yearOptions.map((y) => (
+                <option key={y} value={y}>
+                  {y}
                 </option>
               ))}
             </select>

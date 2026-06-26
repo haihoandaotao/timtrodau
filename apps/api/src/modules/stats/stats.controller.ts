@@ -41,4 +41,11 @@ export class StatsController {
   trustedLandlords() {
     return this.service.trustedLandlords();
   }
+
+  @Get('prospective-by-major')
+  @ApiOperation({ summary: 'Số tân sinh viên đã đăng ký theo từng ngành' })
+  @ApiResponse({ status: 200, description: 'Mảng major + count' })
+  prospectiveByMajor() {
+    return this.service.prospectiveByMajor();
+  }
 }

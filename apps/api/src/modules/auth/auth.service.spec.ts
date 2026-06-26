@@ -186,6 +186,7 @@ describe('AuthService', () => {
         email: 'moi@x.vn',
         dob: '2007-01-01',
         intendedMajor: 'Kiến trúc',
+        enrollmentYear: 2026,
       });
       expect(res.user.role).toBe(UserRole.STUDENT);
       expect(admissionRepo.save).toHaveBeenCalled();
@@ -199,6 +200,7 @@ describe('AuthService', () => {
           email: 'moi@x.vn',
           dob: '2007-01-01',
           intendedMajor: 'A',
+          enrollmentYear: 2026,
         }),
       ).rejects.toBeInstanceOf(ConflictException);
     });

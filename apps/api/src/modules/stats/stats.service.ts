@@ -5,11 +5,13 @@ import {
   AccommodationStatus,
   AccommodationType,
   BookingStatus,
+  StudentType,
   VerifyStatus,
 } from '../../common/enums';
 import { Accommodation } from '../accommodations/entities/accommodation.entity';
 import { Booking } from '../bookings/entities/booking.entity';
 import { LandlordProfile } from '../users/entities/landlord-profile.entity';
+import { StudentProfile } from '../users/entities/student-profile.entity';
 
 const PRICE_LOW = 1_500_000;
 const PRICE_HIGH = 2_500_000;
@@ -21,7 +23,23 @@ export class StatsService {
     @InjectRepository(Booking) private readonly bookingRepo: Repository<Booking>,
     @InjectRepository(LandlordProfile)
     private readonly landlordRepo: Repository<LandlordProfile>,
+    @InjectRepository(StudentProfile)
+    private readonly studentProfileRepo: Repository<StudentProfile>,
   ) {}
+
+  /** Số tân sinh viên đã đăng ký theo từng ngành dự kiến. */
+  async prospectiveByMajor(): Promise<Array<{ major: string; count: number }>> {
+    const rows = await this.studentProfileRepo
+      .createQueryBuilder('sp')
+      .select('COALESCE(sp.intended_major, :unknown)', 'major')
+      .addSelect('COUNT(sp.id)', 'count')
+      .where('sp.student_type = :t', { t: StudentType.PROSPECTIVE })
+      .setParameter('unknown', 'Chưa rõ')
+      .groupBy('sp.intended_major')
+      .orderBy('count', 'DESC')
+      .getRawMany<{ major: string; count: string }>();
+    return rows.map((r) => ({ major: r.major, count: Number(r.count) }));
+  }
 
   /** DAL-15: số liệu tổng quan. */
   async overview(): Promise<{

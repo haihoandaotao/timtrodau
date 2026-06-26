@@ -107,7 +107,11 @@ export class AuthService {
     const user = await this.upsertStudent(
       { email: dto.email ?? null, phone: dto.phone ?? null },
       dto.fullName,
-      { studentType: StudentType.PROSPECTIVE, intendedMajor: dto.intendedMajor },
+      {
+        studentType: StudentType.PROSPECTIVE,
+        intendedMajor: dto.intendedMajor,
+        enrollmentYear: dto.enrollmentYear,
+      },
     );
     return { tokens: await this.buildTokens(user), user: this.sanitize(user) };
   }
@@ -132,7 +136,12 @@ export class AuthService {
   private async upsertStudent(
     identity: { studentCode?: string | null; email?: string | null; phone?: string | null },
     fullName: string,
-    profile: { studentType: StudentType; major?: string; intendedMajor?: string },
+    profile: {
+      studentType: StudentType;
+      major?: string;
+      intendedMajor?: string;
+      enrollmentYear?: number;
+    },
   ): Promise<User> {
     let user: User | null = null;
     if (identity.studentCode) {
@@ -167,6 +176,7 @@ export class AuthService {
     sp.studentType = profile.studentType;
     if (profile.major !== undefined) sp.major = profile.major;
     if (profile.intendedMajor !== undefined) sp.intendedMajor = profile.intendedMajor;
+    if (profile.enrollmentYear !== undefined) sp.enrollmentYear = profile.enrollmentYear;
     await this.studentProfileRepo.save(sp);
 
     return user;
