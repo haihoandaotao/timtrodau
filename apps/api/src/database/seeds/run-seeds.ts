@@ -105,6 +105,20 @@ async function run() {
     { code: '2021120001', name: 'Nguyễn Văn Kiến', major: 'Kiến trúc', dob: '2003-05-12' },
     { code: '2021120002', name: 'Phạm Thị Trúc', major: 'Kiến trúc', dob: '2003-09-20' },
     { code: '2022150033', name: 'Hồ Quang Xây', major: 'Xây dựng', dob: '2004-01-08' },
+    // Dữ liệu SV thật từ data1.pdf (ngày sinh dd/mm/yyyy → yyyy-mm-dd)
+    {
+      code: '1851040225',
+      name: 'Nguyễn Phúc Đức',
+      major: 'Kỹ thuật xây dựng công trình giao thông',
+      dob: '2000-05-03',
+    },
+    {
+      code: '1851040228',
+      name: 'Hồ Hữu Phước',
+      major: 'Kỹ thuật xây dựng công trình giao thông',
+      dob: '2000-02-08',
+    },
+    { code: '1851220201', name: 'Lê Văn Long', major: 'Công nghệ thông tin', dob: '2000-01-08' },
   ];
   for (const s of STUDENTS) {
     const exists = await ds.query('SELECT id FROM student_records WHERE student_code = ? LIMIT 1', [
