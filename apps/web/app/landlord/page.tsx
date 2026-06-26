@@ -233,8 +233,23 @@ function CreateForm({ onCreated }: { onCreated: () => void }) {
   const [msg, setMsg] = useState('');
   const [error, setError] = useState('');
 
+  const setCost = (key: 'electricity' | 'water' | 'sanitation' | 'internet', value: string) =>
+    setForm((f) => ({ ...f, extraCosts: { ...f.extraCosts, [key]: value } }));
+
+  // Loại bỏ field chi phí rỗng trước khi gửi.
+  const cleanExtraCosts = (ec?: Record<string, string | undefined>) => {
+    if (!ec) return undefined;
+    const entries = Object.entries(ec).filter(([, v]) => v && v.trim());
+    return entries.length ? Object.fromEntries(entries) : undefined;
+  };
+
   const create = useMutation({
-    mutationFn: () => landlordApi.create({ ...form, amenityIds: amenityIds.length ? amenityIds : undefined }),
+    mutationFn: () =>
+      landlordApi.create({
+        ...form,
+        amenityIds: amenityIds.length ? amenityIds : undefined,
+        extraCosts: cleanExtraCosts(form.extraCosts),
+      }),
     onSuccess: () => {
       setMsg('Đã gửi bài đăng — chờ Ban quản trị duyệt. Thêm ảnh ở danh sách bên dưới.');
       setError('');
@@ -267,6 +282,18 @@ function CreateForm({ onCreated }: { onCreated: () => void }) {
           </select>
           <input className="inp" type="number" step="0.1" placeholder="Cách trường (km)" value={form.distanceKm ?? ''} onChange={(e) => setForm({ ...form, distanceKm: e.target.value ? Number(e.target.value) : undefined })} />
         </div>
+
+        {/* Đơn giá điện/nước/dịch vụ (tuỳ chọn) */}
+        <div>
+          <p className="mb-1.5 text-xs font-semibold uppercase text-slate-400">Chi phí dịch vụ (tuỳ chọn)</p>
+          <div className="grid grid-cols-2 gap-3">
+            <input className="inp" placeholder="Điện (VD: 3.500đ/kWh)" value={form.extraCosts?.electricity ?? ''} onChange={(e) => setCost('electricity', e.target.value)} />
+            <input className="inp" placeholder="Nước (VD: 100k/người/tháng)" value={form.extraCosts?.water ?? ''} onChange={(e) => setCost('water', e.target.value)} />
+            <input className="inp" placeholder="Vệ sinh/rác (VD: 20k/tháng)" value={form.extraCosts?.sanitation ?? ''} onChange={(e) => setCost('sanitation', e.target.value)} />
+            <input className="inp" placeholder="Mạng/Internet (VD: Miễn phí)" value={form.extraCosts?.internet ?? ''} onChange={(e) => setCost('internet', e.target.value)} />
+          </div>
+        </div>
+
         <div>
           <p className="mb-1.5 text-xs font-semibold uppercase text-slate-400">Tiện ích</p>
           <div className="flex flex-wrap gap-2">
