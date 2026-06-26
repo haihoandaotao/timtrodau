@@ -55,6 +55,51 @@ export class AdmissionApiService {
     return { configured: this.isConfigured(), syncedCount };
   }
 
+  /** Danh sách Tân sinh viên dự kiến (admission_candidates) — phân trang + tìm kiếm. */
+  async listCandidates(params: { q?: string; page?: number; limit?: number }) {
+    const page = Math.max(1, Number(params.page) || 1);
+    const limit = Math.min(100, Math.max(1, Number(params.limit) || 20));
+    const qb = this.repo.createQueryBuilder('c');
+    if (params.q?.trim()) {
+      qb.andWhere(
+        '(c.full_name LIKE :q OR c.email LIKE :q OR c.phone LIKE :q OR c.candidate_code LIKE :q)',
+        { q: `%${params.q.trim()}%` },
+      );
+    }
+    qb.orderBy('c.id', 'DESC')
+      .skip((page - 1) * limit)
+      .take(limit);
+    const [rows, total] = await qb.getManyAndCount();
+    return {
+      data: rows.map((r) => ({
+        fullName: r.fullName,
+        email: r.email,
+        phone: r.phone,
+        dateOfBirth: r.dateOfBirth ? String(r.dateOfBirth).slice(0, 10) : null,
+        intendedMajor: r.intendedMajor,
+        isSelfRegistered: r.isSelfRegistered,
+      })),
+      meta: { total, page, limit, totalPages: Math.max(1, Math.ceil(total / limit)) },
+    };
+  }
+
+  /** Thống kê Tân sinh viên dự kiến theo ngành. */
+  async candidateStats(): Promise<{
+    total: number;
+    byMajor: Array<{ major: string; count: number }>;
+  }> {
+    const total = await this.repo.count();
+    const rows = await this.repo
+      .createQueryBuilder('c')
+      .select('COALESCE(c.intended_major, :unknown)', 'major')
+      .addSelect('COUNT(*)', 'count')
+      .setParameter('unknown', 'Chưa rõ')
+      .groupBy('c.intended_major')
+      .orderBy('count', 'DESC')
+      .getRawMany<{ major: string; count: string }>();
+    return { total, byMajor: rows.map((r) => ({ major: r.major, count: Number(r.count) })) };
+  }
+
   private candidatesUrl(query: string): string {
     const base = this.config.get<string>('admission.apiBaseUrl');
     return `${base}/api/v1/integration/admission/candidates${query}`;

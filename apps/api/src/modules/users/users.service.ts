@@ -1,6 +1,6 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindOptionsWhere, Repository } from 'typeorm';
+import { DataSource, FindOptionsWhere, Repository } from 'typeorm';
 import { UserRole, UserStatus } from '../../common/enums';
 import { Paginated } from '../../common/interfaces/paginated.interface';
 import { User } from './entities/user.entity';
@@ -23,7 +23,53 @@ export class UsersService {
     @InjectRepository(User) private readonly userRepo: Repository<User>,
     @InjectRepository(StudentProfile)
     private readonly studentRepo: Repository<StudentProfile>,
+    private readonly dataSource: DataSource,
   ) {}
+
+  /**
+   * Admin: xoá tài khoản người dùng + dọn dữ liệu liên quan (transaction).
+   * Không cho xoá ADMIN hoặc chính mình.
+   */
+  async deleteUser(id: string, currentUserId: string): Promise<{ deleted: true }> {
+    const user = await this.userRepo.findOne({ where: { id } });
+    if (!user) {
+      throw new NotFoundException('Không tìm thấy người dùng');
+    }
+    if (user.role === UserRole.ADMIN) {
+      throw new ForbiddenException('Không thể xoá tài khoản quản trị');
+    }
+    if (id === currentUserId) {
+      throw new ForbiddenException('Không thể tự xoá tài khoản của mình');
+    }
+
+    await this.dataSource.transaction(async (m) => {
+      // Dữ liệu do user tạo
+      await m.query('DELETE FROM favorites WHERE user_id = ?', [id]);
+      await m.query('DELETE FROM bookings WHERE student_id = ?', [id]);
+      await m.query('DELETE FROM roommate_posts WHERE student_id = ?', [id]);
+
+      // Nếu là chủ trọ: dọn các tin đăng + dữ liệu con của tin
+      const accs: Array<{ id: string }> = await m.query(
+        'SELECT id FROM accommodations WHERE landlord_id = ?',
+        [id],
+      );
+      const accIds = accs.map((a) => a.id);
+      if (accIds.length) {
+        await m.query('DELETE FROM bookings WHERE accommodation_id IN (?)', [accIds]);
+        await m.query('DELETE FROM favorites WHERE accommodation_id IN (?)', [accIds]);
+        await m.query('DELETE FROM images WHERE accommodation_id IN (?)', [accIds]);
+        await m.query('DELETE FROM accommodation_amenities WHERE accommodation_id IN (?)', [
+          accIds,
+        ]);
+        await m.query('DELETE FROM accommodations WHERE landlord_id = ?', [id]);
+      }
+
+      await m.query('DELETE FROM student_profiles WHERE user_id = ?', [id]);
+      await m.query('DELETE FROM landlord_profiles WHERE user_id = ?', [id]);
+      await m.query('DELETE FROM users WHERE id = ?', [id]);
+    });
+    return { deleted: true };
+  }
 
   /** Admin: danh sách user theo vai trò (không trả password_hash). */
   async listForAdmin(params: {

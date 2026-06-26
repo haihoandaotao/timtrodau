@@ -71,6 +71,11 @@ export const adminApi = {
       headers: authHeaders(),
       body: JSON.stringify({ status }),
     }),
+  deleteUser: (id: string) =>
+    apiFetch<{ deleted: boolean }>(`/admin/users/${id}`, {
+      method: 'DELETE',
+      headers: authHeaders(),
+    }),
 
   // Bookings (DAL-14)
   bookings: (status?: string, page = 1) =>
@@ -118,6 +123,21 @@ export const adminApi = {
   },
   studentStats: () => apiFetch<StudentStatsData>('/admin/students/stats', { headers: authHeaders() }),
 
+  // Tân sinh viên dự kiến (admission_candidates)
+  admissionCandidates: (params: { q?: string; page?: number }) => {
+    const qs = new URLSearchParams();
+    if (params.q) qs.set('q', params.q);
+    qs.set('page', String(params.page ?? 1));
+    return apiFetch<Paginated<CandidateRow>>(`/admin/admission/candidates?${qs.toString()}`, {
+      headers: authHeaders(),
+    });
+  },
+  candidateStats: () =>
+    apiFetch<{ total: number; byMajor: Array<{ major: string; count: number }> }>(
+      '/admin/admission/candidate-stats',
+      { headers: authHeaders() },
+    ),
+
   // Majors (cấu hình ngành)
   majors: () => apiFetch<AdminMajor[]>('/admin/majors', { headers: authHeaders() }),
   createMajor: (name: string) =>
@@ -164,6 +184,14 @@ export interface StudentStatsData {
   total: number;
   byMajor: Array<{ major: string; count: number }>;
   byCohort: Array<{ cohort: string; count: number }>;
+}
+export interface CandidateRow {
+  fullName: string;
+  email: string | null;
+  phone: string | null;
+  dateOfBirth: string | null;
+  intendedMajor: string | null;
+  isSelfRegistered: boolean;
 }
 export interface AdminArea {
   id: number;

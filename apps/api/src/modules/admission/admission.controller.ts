@@ -1,5 +1,5 @@
-import { Controller, Get, HttpCode, HttpStatus, Post } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { Controller, Get, HttpCode, HttpStatus, Post, Query } from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { UserRole } from '../../common/enums';
 import { AdmissionApiService } from './admission-api.service';
@@ -26,5 +26,21 @@ export class AdmissionController {
   @ApiResponse({ status: 503, description: 'Không kết nối được API tuyển sinh' })
   sync() {
     return this.service.sync();
+  }
+
+  @Get('candidates')
+  @ApiOperation({ summary: 'Danh sách Tân sinh viên dự kiến (phân trang + tìm kiếm)' })
+  @ApiQuery({ name: 'q', required: false })
+  @ApiQuery({ name: 'page', required: false })
+  @ApiResponse({ status: 200, description: 'Danh sách phân trang' })
+  candidates(@Query('q') q?: string, @Query('page') page?: string) {
+    return this.service.listCandidates({ q, page: page ? Number(page) : undefined });
+  }
+
+  @Get('candidate-stats')
+  @ApiOperation({ summary: 'Thống kê Tân sinh viên dự kiến theo ngành' })
+  @ApiResponse({ status: 200, description: 'total + byMajor' })
+  candidateStats() {
+    return this.service.candidateStats();
   }
 }
