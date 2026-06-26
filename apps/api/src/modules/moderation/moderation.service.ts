@@ -25,7 +25,7 @@ export class ModerationService {
   listPendingAccommodations(): Promise<Accommodation[]> {
     return this.accRepo.find({
       where: { status: AccommodationStatus.PENDING },
-      relations: { images: true, area: true },
+      relations: { images: true, area: true, amenities: true },
       order: { createdAt: 'ASC' },
     });
   }
