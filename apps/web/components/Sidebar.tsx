@@ -65,7 +65,7 @@ export function Sidebar() {
       {/* Logo */}
       <Link href="/" onClick={() => setOpen(false)} className="flex items-center gap-2.5 px-5 py-4">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/logo.svg" alt="KTĐ" className="h-10 w-10 rounded-xl bg-white object-contain p-1" />
+        <img src="/logo.png" alt="KTĐ" className="h-10 w-10 rounded-xl bg-white object-contain p-1" />
         <span className="text-lg font-bold leading-tight">
           DAU<br />
           <span className="text-xs font-medium text-white/70">Hệ thống tìm trọ</span>

@@ -2,6 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
+import { useState } from 'react';
 import { accommodationsApi } from '@/lib/api/accommodations';
 import { BookingButton } from '@/components/BookingButton';
 import { FavoriteButton } from '@/components/FavoriteButton';
@@ -20,6 +21,7 @@ const EXTRA_COST_LABEL: Record<string, string> = {
 };
 
 export default function RoomDetailPage({ params }: { params: { id: string } }) {
+  const [lightbox, setLightbox] = useState<string | null>(null);
   const { data: room, isLoading, isError } = useQuery({
     queryKey: ['room', params.id],
     queryFn: () => accommodationsApi.getById(params.id),
@@ -39,15 +41,16 @@ export default function RoomDetailPage({ params }: { params: { id: string } }) {
         ← Quay lại tìm kiếm
       </Link>
 
-      {/* Ảnh */}
+      {/* Ảnh — bấm để xem lớn */}
       <div className="mt-3 grid grid-cols-2 gap-2">
-        {(room.images ?? []).slice(0, 4).map((img) => (
+        {(room.images ?? []).map((img) => (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             key={img.id}
             src={`${API_ORIGIN}${img.url}`}
             alt={room.title}
-            className="aspect-video w-full rounded-lg object-cover"
+            onClick={() => setLightbox(`${API_ORIGIN}${img.url}`)}
+            className="aspect-video w-full cursor-zoom-in rounded-lg object-cover transition hover:opacity-90"
           />
         ))}
         {(!room.images || room.images.length === 0) && (
@@ -56,6 +59,25 @@ export default function RoomDetailPage({ params }: { params: { id: string } }) {
           </div>
         )}
       </div>
+
+      {/* Lightbox */}
+      {lightbox && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+          onClick={() => setLightbox(null)}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={lightbox} alt="" className="max-h-full max-w-full rounded-lg object-contain" />
+          <button
+            type="button"
+            onClick={() => setLightbox(null)}
+            className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/20 text-2xl text-white hover:bg-white/30"
+            aria-label="Đóng"
+          >
+            ×
+          </button>
+        </div>
+      )}
 
       <div className="mt-4 space-y-2">
         <div className="flex items-center gap-2">
@@ -76,7 +98,9 @@ export default function RoomDetailPage({ params }: { params: { id: string } }) {
         </div>
         <p className="text-2xl font-bold text-brand">{formatVnd(room.price)}/tháng</p>
         <p className="text-sm text-slate-500">📍 {room.address}</p>
-        {room.description && <p className="text-slate-700">{room.description}</p>}
+        {room.description && (
+          <p className="whitespace-pre-line leading-relaxed text-slate-700">{room.description}</p>
+        )}
       </div>
 
       {/* Liên hệ chủ trọ */}

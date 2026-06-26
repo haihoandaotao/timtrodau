@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { accommodationsApi } from '@/lib/api/accommodations';
+import { majorsApi } from '@/lib/api/auth';
 import { roommateApi, type CreateRoommatePayload } from '@/lib/api/roommate';
 import { useAuth } from '@/lib/auth-context';
 import { formatVnd } from '@/lib/format';
@@ -85,6 +86,7 @@ function CreateForm({
 }) {
   const [form, setForm] = useState<CreateRoommatePayload>({ major: '' });
   const [msg, setMsg] = useState('');
+  const { data: majors } = useQuery({ queryKey: ['majors'], queryFn: majorsApi.listActive });
   const create = useMutation({
     mutationFn: () => roommateApi.create(form),
     onSuccess: () => {
@@ -98,7 +100,12 @@ function CreateForm({
     <Card className="p-5">
       <h2 className="mb-3 font-bold text-slate-800">Đăng tin tìm bạn ở ghép</h2>
       <form onSubmit={(e) => { e.preventDefault(); create.mutate(); }} className="space-y-3">
-        <input className="inp" placeholder="Ngành học (VD: Kiến trúc)" value={form.major} onChange={(e) => setForm({ ...form, major: e.target.value })} required />
+        <select className="inp" value={form.major} onChange={(e) => setForm({ ...form, major: e.target.value })} required>
+          <option value="">— Chọn ngành học —</option>
+          {majors?.map((m) => (
+            <option key={m.id} value={m.name}>{m.name}</option>
+          ))}
+        </select>
         <div className="grid grid-cols-2 gap-3">
           <input className="inp" type="number" placeholder="Ngân sách (VND)" value={form.budget ?? ''} onChange={(e) => setForm({ ...form, budget: e.target.value ? Number(e.target.value) : undefined })} />
           <select className="inp" value={form.preferredAreaId ?? ''} onChange={(e) => setForm({ ...form, preferredAreaId: e.target.value ? Number(e.target.value) : undefined })}>

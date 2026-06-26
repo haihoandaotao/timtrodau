@@ -38,7 +38,7 @@ export function TopBar({ showMenuButton = false }: { showMenuButton?: boolean })
         )}
         <Link href="/" className="flex items-center gap-2.5">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.svg" alt="KTĐ" className="h-9 w-9 rounded-lg bg-white object-contain p-0.5 ring-1 ring-slate-200" />
+          <img src="/logo.png" alt="KTĐ" className="h-9 w-9 rounded-lg bg-white object-contain p-0.5 ring-1 ring-slate-200" />
           <div className="leading-tight">
             <p className="text-sm font-bold text-slate-800">DAU ACCOMMODATION</p>
             <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Hệ thống hỗ trợ tìm trọ</p>

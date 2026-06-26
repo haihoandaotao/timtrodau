@@ -93,7 +93,16 @@ export function AccommodationForm({
         </div>
       </div>
 
-      <textarea className="inp" rows={2} placeholder="Mô tả (tuỳ chọn)" value={form.description ?? ''} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+      <div>
+        <p className="mb-1.5 text-xs font-semibold uppercase text-slate-400">Mô tả chi tiết</p>
+        <textarea
+          className="inp min-h-[200px] leading-relaxed"
+          rows={9}
+          placeholder="Mô tả chi tiết: vị trí, diện tích, nội thất, an ninh, giờ giấc, ưu đãi… (mỗi ý một dòng để dễ đọc)"
+          value={form.description ?? ''}
+          onChange={(e) => setForm({ ...form, description: e.target.value })}
+        />
+      </div>
 
       <button type="submit" disabled={pending} className="w-full rounded-xl bg-brand py-2.5 font-semibold text-white transition hover:bg-brand-dark disabled:opacity-60">
         {pending ? 'Đang lưu…' : submitLabel}
