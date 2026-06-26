@@ -125,7 +125,14 @@ export default function RoomDetailPage({ params }: { params: { id: string } }) {
 
       {/* Bản đồ */}
       <section className="mt-4">
-        <h2 className="mb-2 text-sm font-semibold uppercase text-slate-400">Vị trí</h2>
+        <div className="mb-2 flex items-center justify-between">
+          <h2 className="text-sm font-semibold uppercase text-slate-400">Vị trí</h2>
+          {room.mapUrl && (
+            <a href={room.mapUrl} target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-brand hover:underline">
+              🗺️ Mở Google Maps
+            </a>
+          )}
+        </div>
         <iframe
           title="map"
           src={mapSrc}

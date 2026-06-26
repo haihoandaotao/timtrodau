@@ -102,7 +102,7 @@ function CreateForm({
         <div className="grid grid-cols-2 gap-3">
           <input className="inp" type="number" placeholder="Ngân sách (VND)" value={form.budget ?? ''} onChange={(e) => setForm({ ...form, budget: e.target.value ? Number(e.target.value) : undefined })} />
           <select className="inp" value={form.preferredAreaId ?? ''} onChange={(e) => setForm({ ...form, preferredAreaId: e.target.value ? Number(e.target.value) : undefined })}>
-            <option value="">— Khu vực —</option>
+            <option value="">— Phường/xã —</option>
             {areas.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
           </select>
         </div>

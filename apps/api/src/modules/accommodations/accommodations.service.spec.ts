@@ -17,7 +17,9 @@ describe('AccommodationsService', () => {
     findOne: jest.fn(),
     count: jest.fn(),
     softRemove: jest.fn(),
+    increment: jest.fn(),
   };
+  const bookingRepo = { count: jest.fn() };
   const imageRepo = {
     create: jest.fn((x) => x),
     save: jest.fn(async (x) => ({ id: '10', ...x })),
@@ -47,6 +49,7 @@ describe('AccommodationsService', () => {
       imageRepo as never,
       amenityRepo as never,
       areaRepo as never,
+      bookingRepo as never,
       usersService as never,
       storage as never,
     );

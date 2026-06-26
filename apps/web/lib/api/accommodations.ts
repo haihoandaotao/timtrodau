@@ -35,6 +35,9 @@ export interface Accommodation {
   lng: string | null;
   distanceKm: string | null;
   extraCosts: Record<string, string> | null;
+  mapUrl?: string | null;
+  views?: number;
+  rejectReason?: string | null;
   isAvailable: boolean;
   status?: string;
   images?: AccommodationImage[];

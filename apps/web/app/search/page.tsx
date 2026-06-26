@@ -107,7 +107,7 @@ export default function SearchPage() {
           ))}
         </FilterRow>
         {areas && areas.length > 0 && (
-          <FilterRow label="Khu vực">
+          <FilterRow label="Phường/xã">
             <Chip active={areaId === undefined} onClick={() => setAreaId(undefined)}>
               Tất cả
             </Chip>

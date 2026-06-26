@@ -46,6 +46,9 @@ export default function AdminDashboard() {
           <Link href="/admin/majors" className="rounded-lg border border-brand px-3 py-1.5 text-sm text-brand">
             Ngành
           </Link>
+          <Link href="/admin/areas" className="rounded-lg border border-brand px-3 py-1.5 text-sm text-brand">
+            Phường/xã
+          </Link>
           <button
             type="button"
             onClick={refreshAll}

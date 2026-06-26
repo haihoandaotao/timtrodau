@@ -41,6 +41,12 @@ export class CreateAccommodationDto {
   @MaxLength(255)
   address: string;
 
+  @ApiPropertyOptional({ example: 'https://maps.app.goo.gl/...', description: 'Link Google Maps' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  mapUrl?: string;
+
   @ApiPropertyOptional({ example: 1, description: 'ID khu vực' })
   @IsOptional()
   @IsInt()

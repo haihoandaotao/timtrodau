@@ -7,9 +7,10 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
-import { AccommodationStatus, UserRole, UserStatus } from '../../common/enums';
+import { AccommodationStatus, BookingStatus, UserRole, UserStatus } from '../../common/enums';
 import { AuthUser } from '../../common/interfaces/jwt-payload.interface';
 import { Paginated } from '../../common/interfaces/paginated.interface';
+import { Booking } from '../bookings/entities/booking.entity';
 import { UsersService } from '../users/users.service';
 import { STORAGE_SERVICE, StorageService } from '../files/storage.interface';
 import { Accommodation } from './entities/accommodation.entity';
@@ -20,6 +21,13 @@ import { CreateAccommodationDto } from './dto/create-accommodation.dto';
 import { QueryAccommodationDto } from './dto/query-accommodation.dto';
 import { UpdateAccommodationDto } from './dto/update-accommodation.dto';
 
+export interface LandlordStats {
+  publishedCount: number;
+  totalViews: number;
+  totalBookings: number;
+  successBookings: number;
+}
+
 @Injectable()
 export class AccommodationsService {
   constructor(
@@ -28,9 +36,40 @@ export class AccommodationsService {
     @InjectRepository(Image) private readonly imageRepo: Repository<Image>,
     @InjectRepository(Amenity) private readonly amenityRepo: Repository<Amenity>,
     @InjectRepository(Area) private readonly areaRepo: Repository<Area>,
+    @InjectRepository(Booking) private readonly bookingRepo: Repository<Booking>,
     private readonly usersService: UsersService,
     @Inject(STORAGE_SERVICE) private readonly storage: StorageService,
   ) {}
+
+  /** Thống kê cho chủ trọ: bài đã duyệt, lượt tiếp cận, lượt giữ chỗ, đặt thành công. */
+  async landlordStats(landlordId: string): Promise<LandlordStats> {
+    const accs = await this.accRepo.find({ where: { landlordId } });
+    const ids = accs.map((a) => a.id);
+    const publishedCount = accs.filter((a) => a.status === AccommodationStatus.PUBLISHED).length;
+    const totalViews = accs.reduce((sum, a) => sum + (a.views ?? 0), 0);
+    let totalBookings = 0;
+    let successBookings = 0;
+    if (ids.length > 0) {
+      [totalBookings, successBookings] = await Promise.all([
+        this.bookingRepo.count({ where: { accommodationId: In(ids) } }),
+        this.bookingRepo.count({
+          where: { accommodationId: In(ids), status: BookingStatus.SUCCESS },
+        }),
+      ]);
+    }
+    return { publishedCount, totalViews, totalBookings, successBookings };
+  }
+
+  /** Xoá 1 ảnh của bài đăng (chỉ owner). */
+  async removeImage(accId: string, imageId: string, userId: string): Promise<{ success: true }> {
+    await this.findOwned(accId, userId);
+    const img = await this.imageRepo.findOne({ where: { id: imageId, accommodationId: accId } });
+    if (!img) {
+      throw new NotFoundException('Không tìm thấy ảnh');
+    }
+    await this.imageRepo.delete(img.id);
+    return { success: true };
+  }
 
   // ===================== PUBLIC (Sinh viên) =====================
 
@@ -118,6 +157,9 @@ export class AccommodationsService {
     if (!acc) {
       throw new NotFoundException('Không tìm thấy phòng');
     }
+    // Đếm lượt tiếp cận (người xem chi tiết).
+    await this.accRepo.increment({ id: acc.id }, 'views', 1);
+    acc.views = (acc.views ?? 0) + 1;
     if (acc.landlord) {
       // Loại field nhạy cảm; chỉ để lộ tên + SĐT liên hệ cho người thuê.
       acc.landlord.passwordHash = null;
@@ -159,6 +201,7 @@ export class AccommodationsService {
       lng: dto.lng !== undefined ? String(dto.lng) : null,
       distanceKm: dto.distanceKm !== undefined ? String(dto.distanceKm) : null,
       extraCosts: dto.extraCosts ?? null,
+      mapUrl: dto.mapUrl ?? null,
       isAvailable: true,
       status: AccommodationStatus.PENDING,
       amenities: await this.resolveAmenities(dto.amenityIds),
@@ -190,6 +233,7 @@ export class AccommodationsService {
       ...(dto.lng !== undefined && { lng: String(dto.lng) }),
       ...(dto.distanceKm !== undefined && { distanceKm: String(dto.distanceKm) }),
       ...(dto.extraCosts !== undefined && { extraCosts: dto.extraCosts }),
+      ...(dto.mapUrl !== undefined && { mapUrl: dto.mapUrl }),
     });
     if (dto.amenityIds !== undefined) {
       acc.amenities = await this.resolveAmenities(dto.amenityIds);

@@ -87,6 +87,14 @@ export class AccommodationsController {
   }
 
   @Roles(UserRole.LANDLORD)
+  @Get('landlord/stats')
+  @ApiOperation({ summary: 'Thống kê của chủ trọ (đã duyệt/tiếp cận/giữ chỗ/thành công)' })
+  @ApiResponse({ status: 200, description: 'Số liệu thống kê' })
+  landlordStats(@CurrentUser() user: AuthUser) {
+    return this.service.landlordStats(user.id);
+  }
+
+  @Roles(UserRole.LANDLORD)
   @Patch(':id')
   @ApiOperation({ summary: 'Sửa bài đăng (đưa về PENDING để duyệt lại)' })
   @ApiResponse({ status: 200, description: 'Đã cập nhật' })
@@ -127,6 +135,19 @@ export class AccommodationsController {
     @UploadedFiles() files: UploadedFileLike[],
   ) {
     return this.service.addImages(id, user.id, files ?? []);
+  }
+
+  @Roles(UserRole.LANDLORD)
+  @Delete(':id/images/:imageId')
+  @ApiOperation({ summary: 'Xoá 1 ảnh của bài đăng (chủ sở hữu)' })
+  @ApiResponse({ status: 200, description: 'Đã xoá ảnh' })
+  @ApiResponse({ status: 404, description: 'Không tìm thấy ảnh/bài' })
+  removeImage(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Param('imageId') imageId: string,
+  ) {
+    return this.service.removeImage(id, imageId, user.id);
   }
 
   @Roles(UserRole.LANDLORD, UserRole.ADMIN)

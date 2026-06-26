@@ -16,10 +16,18 @@ export interface CreateAccommodationPayload {
   price: number;
   type: AccommodationType;
   address: string;
+  mapUrl?: string;
   areaId?: number;
   distanceKm?: number;
   amenityIds?: number[];
   extraCosts?: { electricity?: string; water?: string; sanitation?: string; internet?: string };
+}
+
+export interface LandlordStats {
+  publishedCount: number;
+  totalViews: number;
+  totalBookings: number;
+  successBookings: number;
 }
 
 export interface LandlordBooking {
@@ -50,6 +58,14 @@ export const landlordApi = {
     apiFetch<void>(`/accommodations/${id}`, { method: 'DELETE', headers: authHeaders() }),
 
   mine: () => apiFetch<Accommodation[]>('/accommodations/mine', { headers: authHeaders() }),
+
+  stats: () => apiFetch<LandlordStats>('/accommodations/landlord/stats', { headers: authHeaders() }),
+
+  deleteImage: (accId: string, imageId: string) =>
+    apiFetch<{ success: boolean }>(`/accommodations/${accId}/images/${imageId}`, {
+      method: 'DELETE',
+      headers: authHeaders(),
+    }),
 
   toggleAvailability: (id: string, isAvailable: boolean) =>
     apiFetch<Accommodation>(`/accommodations/${id}/availability`, {

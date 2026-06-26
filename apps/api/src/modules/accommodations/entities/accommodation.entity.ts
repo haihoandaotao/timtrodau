@@ -67,6 +67,12 @@ export class Accommodation extends BaseEntity {
   @Column({ name: 'extra_costs', type: 'json', nullable: true })
   extraCosts: ExtraCosts | null;
 
+  @Column({ name: 'map_url', type: 'varchar', length: 500, nullable: true })
+  mapUrl: string | null; // link Google Maps do chủ trọ dán
+
+  @Column({ type: 'int', default: 0 })
+  views: number; // số lượt xem chi tiết (người tiếp cận)
+
   @Column({ name: 'is_available', type: 'boolean', default: true })
   isAvailable: boolean; // toggle còn/hết phòng
 

@@ -10,6 +10,7 @@ import { RolesGuard } from './common/guards/roles.guard';
 import { appConfig, dbConfig, jwtConfig, otpConfig, storageConfig } from './config/env.config';
 import { typeOrmModuleConfig } from './config/typeorm.module-config';
 import { AccommodationsModule } from './modules/accommodations/accommodations.module';
+import { AreasModule } from './modules/areas/areas.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { BookingsModule } from './modules/bookings/bookings.module';
 import { FavoritesModule } from './modules/favorites/favorites.module';
@@ -58,6 +59,7 @@ import { UsersModule } from './modules/users/users.module';
     StatsModule,
     MajorsModule,
     FavoritesModule,
+    AreasModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

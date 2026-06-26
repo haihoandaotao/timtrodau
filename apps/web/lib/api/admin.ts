@@ -81,6 +81,15 @@ export const adminApi = {
       body: JSON.stringify({ status }),
     }),
 
+  // Areas (phường/xã)
+  areas: () => apiFetch<AdminArea[]>('/admin/areas', { headers: authHeaders() }),
+  createArea: (name: string) =>
+    apiFetch<AdminArea>('/admin/areas', { method: 'POST', headers: authHeaders(), body: JSON.stringify({ name }) }),
+  updateArea: (id: number, name: string) =>
+    apiFetch<AdminArea>(`/admin/areas/${id}`, { method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ name }) }),
+  deleteArea: (id: number) =>
+    apiFetch<void>(`/admin/areas/${id}`, { method: 'DELETE', headers: authHeaders() }),
+
   // Majors (cấu hình ngành)
   majors: () => apiFetch<AdminMajor[]>('/admin/majors', { headers: authHeaders() }),
   createMajor: (name: string) =>
@@ -116,6 +125,10 @@ export interface AdminMajor {
   id: number;
   name: string;
   isActive: boolean;
+}
+export interface AdminArea {
+  id: number;
+  name: string;
 }
 export interface AdminBooking {
   id: string;
