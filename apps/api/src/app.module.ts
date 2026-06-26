@@ -28,6 +28,7 @@ import { MajorsModule } from './modules/majors/majors.module';
 import { ModerationModule } from './modules/moderation/moderation.module';
 import { RoommateModule } from './modules/roommate/roommate.module';
 import { StatsModule } from './modules/stats/stats.module';
+import { StudentsModule } from './modules/students/students.module';
 import { UsersModule } from './modules/users/users.module';
 
 /**
@@ -71,6 +72,7 @@ import { UsersModule } from './modules/users/users.module';
     AreasModule,
     LandlordModule,
     AdmissionModule,
+    StudentsModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

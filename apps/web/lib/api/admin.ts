@@ -105,6 +105,19 @@ export const adminApi = {
       headers: authHeaders(),
     }),
 
+  // Sinh viên trường (quản lý + thống kê)
+  students: (params: { q?: string; major?: string; cohort?: string; page?: number }) => {
+    const qs = new URLSearchParams();
+    if (params.q) qs.set('q', params.q);
+    if (params.major) qs.set('major', params.major);
+    if (params.cohort) qs.set('cohort', params.cohort);
+    qs.set('page', String(params.page ?? 1));
+    return apiFetch<Paginated<StudentRow>>(`/admin/students?${qs.toString()}`, {
+      headers: authHeaders(),
+    });
+  },
+  studentStats: () => apiFetch<StudentStatsData>('/admin/students/stats', { headers: authHeaders() }),
+
   // Majors (cấu hình ngành)
   majors: () => apiFetch<AdminMajor[]>('/admin/majors', { headers: authHeaders() }),
   createMajor: (name: string) =>
@@ -140,6 +153,17 @@ export interface AdminMajor {
   id: number;
   name: string;
   isActive: boolean;
+}
+export interface StudentRow {
+  studentCode: string;
+  fullName: string;
+  major: string | null;
+  dateOfBirth: string;
+}
+export interface StudentStatsData {
+  total: number;
+  byMajor: Array<{ major: string; count: number }>;
+  byCohort: Array<{ cohort: string; count: number }>;
 }
 export interface AdminArea {
   id: number;

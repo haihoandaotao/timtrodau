@@ -43,6 +43,7 @@ function navFor(role?: string): { group: string; items: NavItem[] }[] {
         { href: '/admin/moderation', label: 'Duyệt tin', icon: 'check' },
         { href: '/admin/bookings', label: 'Quản lý giữ chỗ', icon: 'list' },
         { href: '/admin/users', label: 'Người dùng', icon: 'user' },
+        { href: '/admin/students', label: 'Sinh viên', icon: 'users' },
         { href: '/admin/majors', label: 'Cấu hình Ngành', icon: 'cap' },
         { href: '/admin/areas', label: 'Cấu hình Phường/xã', icon: 'pin' },
       ],
