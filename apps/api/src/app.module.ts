@@ -7,9 +7,17 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { join } from 'path';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
-import { appConfig, dbConfig, jwtConfig, otpConfig, storageConfig } from './config/env.config';
+import {
+  admissionConfig,
+  appConfig,
+  dbConfig,
+  jwtConfig,
+  otpConfig,
+  storageConfig,
+} from './config/env.config';
 import { typeOrmModuleConfig } from './config/typeorm.module-config';
 import { AccommodationsModule } from './modules/accommodations/accommodations.module';
+import { AdmissionModule } from './modules/admission/admission.module';
 import { AreasModule } from './modules/areas/areas.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { BookingsModule } from './modules/bookings/bookings.module';
@@ -33,7 +41,7 @@ import { UsersModule } from './modules/users/users.module';
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: ['.env', '../../.env'],
-      load: [appConfig, dbConfig, jwtConfig, otpConfig, storageConfig],
+      load: [appConfig, dbConfig, jwtConfig, otpConfig, storageConfig, admissionConfig],
     }),
     // Chống lạm dụng/brute-force: mặc định 120 req/phút/IP (login siết riêng).
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 120 }]),
@@ -62,6 +70,7 @@ import { UsersModule } from './modules/users/users.module';
     FavoritesModule,
     AreasModule,
     LandlordModule,
+    AdmissionModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

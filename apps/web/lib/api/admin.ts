@@ -94,6 +94,17 @@ export const adminApi = {
   deleteArea: (id: number) =>
     apiFetch<void>(`/admin/areas/${id}`, { method: 'DELETE', headers: authHeaders() }),
 
+  // Tích hợp tuyển sinh
+  admissionStatus: () =>
+    apiFetch<{ configured: boolean; syncedCount: number }>('/admin/admission/status', {
+      headers: authHeaders(),
+    }),
+  admissionSync: () =>
+    apiFetch<{ synced: number; total: number }>('/admin/admission/sync', {
+      method: 'POST',
+      headers: authHeaders(),
+    }),
+
   // Majors (cấu hình ngành)
   majors: () => apiFetch<AdminMajor[]>('/admin/majors', { headers: authHeaders() }),
   createMajor: (name: string) =>

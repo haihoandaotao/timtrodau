@@ -10,6 +10,10 @@ export class AdmissionCandidate {
   @PrimaryGeneratedColumn({ type: 'bigint' })
   id: string;
 
+  @Index('uq_admission_candidate_code', { unique: true })
+  @Column({ name: 'candidate_code', type: 'varchar', length: 64, nullable: true })
+  candidateCode: string | null; // mã thí sinh từ hệ thống tuyển sinh (đồng bộ)
+
   @Column({ name: 'full_name', type: 'varchar', length: 191 })
   fullName: string;
 

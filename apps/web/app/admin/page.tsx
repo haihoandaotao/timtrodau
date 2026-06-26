@@ -1,6 +1,7 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
 import { adminApi } from '@/lib/api/admin';
 
 /**
@@ -20,6 +21,16 @@ export default function AdminDashboard() {
   const byMajor = useQuery({
     queryKey: ['admin', 'prospective-by-major'],
     queryFn: adminApi.prospectiveByMajor,
+  });
+  const admission = useQuery({ queryKey: ['admin', 'admission'], queryFn: adminApi.admissionStatus });
+  const [syncMsg, setSyncMsg] = useState('');
+  const sync = useMutation({
+    mutationFn: adminApi.admissionSync,
+    onSuccess: (r) => {
+      setSyncMsg(`Đã đồng bộ ${r.synced}/${r.total} thí sinh.`);
+      admission.refetch();
+    },
+    onError: (e) => setSyncMsg((e as Error).message),
   });
 
   const refreshAll = () => {
@@ -58,6 +69,31 @@ export default function AdminDashboard() {
         <StatCard label="SV đã tìm được phòng" value={overview.data?.studentsFoundRoom} />
         <StatCard label="Phòng đã duyệt" value={overview.data?.publishedAccommodations} />
         <StatCard label="Tổng lượt giữ chỗ" value={overview.data?.totalBookings} />
+      </div>
+
+      {/* Tích hợp API tuyển sinh */}
+      <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-card">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="font-bold text-slate-800">Tích hợp hệ thống tuyển sinh</h2>
+            <p className="text-sm text-slate-500">
+              {admission.data
+                ? admission.data.configured
+                  ? `Đã cấu hình API · ${admission.data.syncedCount} thí sinh đã đồng bộ`
+                  : '⚠️ Chưa cấu hình ADMISSION_API_KEY (đang dùng dữ liệu mẫu)'
+                : 'Đang kiểm tra…'}
+            </p>
+            {syncMsg && <p className="mt-1 text-sm text-brand">{syncMsg}</p>}
+          </div>
+          <button
+            type="button"
+            onClick={() => sync.mutate()}
+            disabled={sync.isPending}
+            className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+          >
+            {sync.isPending ? 'Đang đồng bộ…' : '↻ Đồng bộ thí sinh tuyển sinh'}
+          </button>
+        </div>
       </div>
 
       {/* Phân bố giá */}

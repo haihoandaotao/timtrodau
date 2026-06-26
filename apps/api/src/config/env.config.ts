@@ -34,6 +34,11 @@ export const otpConfig = registerAs('otp', () => ({
   length: parseInt(process.env.OTP_LENGTH ?? '6', 10),
 }));
 
+export const admissionConfig = registerAs('admission', () => ({
+  apiBaseUrl: process.env.ADMISSION_API_BASE_URL ?? 'https://aff-api.ktd.edu.vn/api/v1/integration',
+  apiKey: process.env.ADMISSION_API_KEY ?? '',
+}));
+
 export const storageConfig = registerAs('storage', () => ({
   uploadDir: process.env.UPLOAD_DIR ?? 'uploads',
   maxSizeMb: parseInt(process.env.UPLOAD_MAX_SIZE_MB ?? '10', 10),
