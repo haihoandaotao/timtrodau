@@ -9,10 +9,12 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
+import { randomBytes } from 'crypto';
 import { DataSource, Repository } from 'typeorm';
 import { StudentType, UserRole, UserStatus, VerifyStatus } from '../../common/enums';
 import { AuthUser, JwtPayload } from '../../common/interfaces/jwt-payload.interface';
 import { AdmissionApiService } from '../admission/admission-api.service';
+import { MailService } from '../mail/mail.service';
 import { OtpService } from '../notify/otp.service';
 import { User } from '../users/entities/user.entity';
 import { LandlordProfile } from '../users/entities/landlord-profile.entity';
@@ -42,6 +44,7 @@ export interface SafeUser {
   studentCode: string | null;
   role: UserRole;
   status: UserStatus;
+  mustChangePassword: boolean;
 }
 
 @Injectable()
@@ -61,6 +64,7 @@ export class AuthService {
     private readonly config: ConfigService,
     private readonly dataSource: DataSource,
     private readonly admissionApi: AdmissionApiService,
+    private readonly mail: MailService,
   ) {}
 
   // ---------- SV: đăng nhập theo đối tượng (mock hệ thống ngoài) ----------
@@ -310,6 +314,56 @@ export class AuthService {
     return { tokens: await this.buildTokens(user), user: this.sanitize(user) };
   }
 
+  // ---------- Quên mật khẩu (chủ trọ/admin) ----------
+
+  /**
+   * Cấp mật khẩu tạm và gửi qua email. Vì mật khẩu băm 1 chiều (bcrypt) nên
+   * KHÔNG thể gửi lại mật khẩu cũ — ta tạo mật khẩu mới ngẫu nhiên, buộc đổi
+   * ở lần đăng nhập kế. Luôn trả thông báo chung (không lộ email có tồn tại hay không).
+   */
+  async forgotPassword(email: string): Promise<{ message: string }> {
+    const generic = {
+      message: 'Nếu email tồn tại trong hệ thống, mật khẩu tạm đã được gửi tới hộp thư.',
+    };
+    const user = await this.usersService.findByEmail(email);
+    // Chỉ tài khoản dùng mật khẩu (chủ trọ/admin) mới khôi phục được.
+    if (!user || !user.passwordHash || user.role === UserRole.STUDENT) {
+      return generic;
+    }
+
+    const tempPassword = this.generateTempPassword();
+    user.passwordHash = await bcrypt.hash(tempPassword, 10);
+    user.mustChangePassword = true;
+    await this.userRepo.save(user);
+
+    await this.mail.send({
+      to: email,
+      subject: '[DAU] Mật khẩu tạm để đăng nhập lại',
+      text:
+        `Xin chào ${user.fullName},\n\n` +
+        `Bạn (hoặc ai đó) vừa yêu cầu khôi phục mật khẩu.\n` +
+        `Mật khẩu tạm của bạn là: ${tempPassword}\n\n` +
+        `Vui lòng đăng nhập bằng mật khẩu tạm này và đổi mật khẩu ngay sau đó.\n` +
+        `Nếu không phải bạn yêu cầu, hãy đổi mật khẩu để bảo đảm an toàn.`,
+      html:
+        `<p>Xin chào <b>${user.fullName}</b>,</p>` +
+        `<p>Bạn (hoặc ai đó) vừa yêu cầu khôi phục mật khẩu.</p>` +
+        `<p>Mật khẩu tạm của bạn là: <b style="font-size:18px">${tempPassword}</b></p>` +
+        `<p>Vui lòng đăng nhập bằng mật khẩu tạm này và <b>đổi mật khẩu ngay</b> sau đó.</p>` +
+        `<p style="color:#888">Nếu không phải bạn yêu cầu, hãy đổi mật khẩu để bảo đảm an toàn.</p>`,
+    });
+    return generic;
+  }
+
+  /** Sinh mật khẩu tạm dễ đọc (chữ + số), đủ mạnh để dùng tạm thời. */
+  private generateTempPassword(): string {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
+    const bytes = randomBytes(10);
+    let out = '';
+    for (let i = 0; i < 10; i++) out += chars[bytes[i] % chars.length];
+    return `${out}@1`;
+  }
+
   // ---------- Token ----------
 
   async refresh(refreshToken: string): Promise<AuthTokens> {
@@ -373,6 +427,7 @@ export class AuthService {
       throw new BadRequestException('Mật khẩu hiện tại không đúng');
     }
     user.passwordHash = await bcrypt.hash(dto.newPassword, 10);
+    user.mustChangePassword = false;
     await this.userRepo.save(user);
     return { success: true };
   }
@@ -402,6 +457,7 @@ export class AuthService {
       studentCode: user.studentCode,
       role: user.role,
       status: user.status,
+      mustChangePassword: user.mustChangePassword ?? false,
     };
   }
 }

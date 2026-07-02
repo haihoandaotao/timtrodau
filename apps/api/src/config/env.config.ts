@@ -42,6 +42,16 @@ export const admissionConfig = registerAs('admission', () => ({
   apiKey: process.env.INTEGRATION_API_KEY ?? process.env.ADMISSION_API_KEY ?? '',
 }));
 
+export const mailConfig = registerAs('mail', () => ({
+  // Gmail SMTP qua App Password (16 ký tự, KHÔNG phải mật khẩu Gmail thường).
+  user: process.env.GMAIL_USER ?? '',
+  appPassword: (process.env.GMAIL_APP_PASSWORD ?? '').replace(/\s+/g, ''),
+  // Tên hiển thị + địa chỉ gửi đi (mặc định = GMAIL_USER).
+  from: process.env.MAIL_FROM ?? process.env.GMAIL_USER ?? '',
+  // Email nhận thông báo khi có bài đăng mới chờ duyệt (mặc định = GMAIL_USER).
+  adminNotify: process.env.ADMIN_NOTIFY_EMAIL ?? process.env.GMAIL_USER ?? '',
+}));
+
 export const storageConfig = registerAs('storage', () => ({
   uploadDir: process.env.UPLOAD_DIR ?? 'uploads',
   maxSizeMb: parseInt(process.env.UPLOAD_MAX_SIZE_MB ?? '10', 10),

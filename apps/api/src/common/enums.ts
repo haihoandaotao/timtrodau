@@ -54,3 +54,10 @@ export enum RoommatePostStatus {
   OPEN = 'OPEN',
   CLOSED = 'CLOSED',
 }
+
+/** Giới tính bạn ở ghép mong muốn. */
+export enum RoommateGenderPref {
+  ANY = 'ANY', // không yêu cầu
+  MALE = 'MALE', // tìm nam
+  FEMALE = 'FEMALE', // tìm nữ
+}

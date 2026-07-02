@@ -79,9 +79,20 @@ export default function LandlordPage() {
         <AccommodationForm
           submitLabel="Đăng bài (chờ duyệt)"
           pending={create.isPending}
-          onSubmit={(payload) =>
+          allowImages
+          onSubmit={(payload, files) =>
             create.mutate(payload, {
-              onSuccess: () => window.alert('Đã gửi bài đăng — chờ duyệt. Thêm ảnh ở danh sách bên dưới.'),
+              onSuccess: async (created) => {
+                if (files && files.length > 0) {
+                  try {
+                    await landlordApi.uploadImages(created.id, files);
+                  } catch {
+                    window.alert('Đã đăng bài nhưng tải ảnh lỗi. Bạn có thể thêm ảnh lại ở danh sách bên dưới.');
+                  }
+                }
+                invalidate();
+                window.alert('Đã gửi bài đăng — chờ duyệt.');
+              },
             })
           }
         />

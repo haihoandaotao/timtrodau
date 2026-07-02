@@ -8,17 +8,20 @@ import { ACCOMMODATION_TYPE_LABEL } from '@/lib/format';
 
 const TYPES: AccommodationType[] = ['TRADITIONAL', 'MINI_APT', 'SHARED'];
 
-/** Form đăng/sửa bài — dùng chung. Trả payload qua onSubmit. */
+/** Form đăng/sửa bài — dùng chung. Trả payload (+ ảnh đính kèm) qua onSubmit. */
 export function AccommodationForm({
   initial,
   submitLabel,
   onSubmit,
   pending,
+  allowImages,
 }: {
   initial?: Accommodation;
   submitLabel: string;
-  onSubmit: (payload: CreateAccommodationPayload) => void;
+  onSubmit: (payload: CreateAccommodationPayload, files?: File[]) => void;
   pending?: boolean;
+  /** Cho đính kèm ảnh ngay khi đăng bài mới (ảnh sẽ tự nén <2MB ở server). */
+  allowImages?: boolean;
 }) {
   const { data: areas } = useQuery({ queryKey: ['areas'], queryFn: accommodationsApi.areas });
   const { data: amenities } = useQuery({ queryKey: ['amenities'], queryFn: accommodationsApi.amenities });
@@ -37,20 +40,28 @@ export function AccommodationForm({
   const [amenityIds, setAmenityIds] = useState<number[]>(
     initial?.amenities?.map((a) => a.id) ?? [],
   );
+  const [files, setFiles] = useState<File[]>([]);
 
   const setCost = (k: 'electricity' | 'water' | 'sanitation' | 'internet', v: string) =>
     setForm((f) => ({ ...f, extraCosts: { ...f.extraCosts, [k]: v } }));
   const toggleAmenity = (id: number) =>
     setAmenityIds((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
+  const addFiles = (picked: File[]) => {
+    if (picked.length) setFiles((p) => [...p, ...picked]);
+  };
+  const removeFile = (idx: number) => setFiles((p) => p.filter((_, i) => i !== idx));
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     const ec = Object.entries(form.extraCosts ?? {}).filter(([, v]) => v && v.trim());
-    onSubmit({
-      ...form,
-      amenityIds: amenityIds.length ? amenityIds : undefined,
-      extraCosts: ec.length ? Object.fromEntries(ec) : undefined,
-    });
+    onSubmit(
+      {
+        ...form,
+        amenityIds: amenityIds.length ? amenityIds : undefined,
+        extraCosts: ec.length ? Object.fromEntries(ec) : undefined,
+      },
+      files,
+    );
   };
 
   return (
@@ -103,6 +114,31 @@ export function AccommodationForm({
           onChange={(e) => setForm({ ...form, description: e.target.value })}
         />
       </div>
+
+      {allowImages && (
+        <div>
+          <p className="mb-1.5 text-xs font-semibold uppercase text-slate-400">
+            Ảnh phòng (tự nén &lt; 2MB/ảnh)
+          </p>
+          <label className="flex cursor-pointer items-center justify-center rounded-xl border border-dashed border-slate-300 py-3 text-sm text-slate-500 hover:border-brand hover:text-brand">
+            📷 Chọn ảnh để đính kèm
+            <input type="file" multiple accept="image/*" className="hidden" onChange={(e) => { addFiles(e.target.files ? Array.from(e.target.files) : []); e.target.value = ''; }} />
+          </label>
+          {files.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {files.map((f, i) => (
+                <div key={i} className="relative h-16 w-16 overflow-hidden rounded-lg border border-slate-200">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={URL.createObjectURL(f)} alt="" className="h-full w-full object-cover" />
+                  <button type="button" onClick={() => removeFile(i)} className="absolute right-0 top-0 flex h-5 w-5 items-center justify-center rounded-bl-lg bg-black/60 text-xs text-white hover:bg-red-600">
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       <button type="submit" disabled={pending} className="w-full rounded-xl bg-brand py-2.5 font-semibold text-white transition hover:bg-brand-dark disabled:opacity-60">
         {pending ? 'Đang lưu…' : submitLabel}

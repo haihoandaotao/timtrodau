@@ -15,6 +15,7 @@ import { Public } from '../../common/decorators/public.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { AuthUser } from '../../common/interfaces/jwt-payload.interface';
 import { AuthService } from './auth.service';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { LandlordRegisterDto } from './dto/landlord-register.dto';
 import { LoginDto } from './dto/login.dto';
 import { ProspectiveLoginDto } from './dto/prospective-login.dto';
@@ -124,6 +125,19 @@ export class AuthController {
   @ApiResponse({ status: 403, description: 'Tài khoản chưa kích hoạt / SV phải dùng OTP' })
   login(@Body() dto: LoginDto) {
     return this.authService.login(dto);
+  }
+
+  @Public()
+  @Throttle({ default: { limit: 4, ttl: 60000 } })
+  @Post('forgot-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Quên mật khẩu — gửi mật khẩu tạm qua email (chủ trọ/admin)',
+    description: 'Cấp mật khẩu tạm mới rồi gửi email; buộc đổi mật khẩu ở lần đăng nhập kế.',
+  })
+  @ApiResponse({ status: 200, description: 'Đã xử lý (thông báo chung, không lộ email tồn tại)' })
+  forgotPassword(@Body() dto: ForgotPasswordDto) {
+    return this.authService.forgotPassword(dto.email);
   }
 
   @Public()

@@ -14,6 +14,10 @@ export default function AdminDashboard() {
     queryFn: adminApi.priceDistribution,
   });
   const areas = useQuery({ queryKey: ['admin', 'areaDist'], queryFn: adminApi.areaDistribution });
+  const roomsByArea = useQuery({
+    queryKey: ['admin', 'roomsByArea'],
+    queryFn: adminApi.accommodationsByArea,
+  });
   const trusted = useQuery({
     queryKey: ['admin', 'trusted'],
     queryFn: adminApi.trustedLandlords,
@@ -37,11 +41,13 @@ export default function AdminDashboard() {
     overview.refetch();
     prices.refetch();
     areas.refetch();
+    roomsByArea.refetch();
     trusted.refetch();
     byMajor.refetch();
   };
 
   const maxArea = Math.max(1, ...(areas.data?.map((a) => a.count) ?? [1]));
+  const maxRoomsByArea = Math.max(1, ...(roomsByArea.data?.map((a) => a.count) ?? [1]));
   const maxPrice = Math.max(1, ...(prices.data?.map((p) => p.count) ?? [1]));
   const maxMajor = Math.max(1, ...(byMajor.data?.map((m) => m.count) ?? [1]));
 
@@ -103,6 +109,17 @@ export default function AdminDashboard() {
         ))}
       </Section>
 
+      {/* Số phòng theo khu vực */}
+      <Section title="Số phòng theo khu vực">
+        {roomsByArea.data && roomsByArea.data.length > 0 ? (
+          roomsByArea.data.map((a) => (
+            <BarRow key={a.area} label={a.area} value={a.count} max={maxRoomsByArea} />
+          ))
+        ) : (
+          <p className="text-sm text-slate-400">Chưa có phòng đã duyệt.</p>
+        )}
+      </Section>
+
       {/* Phân bố khu vực */}
       <Section title="Khu vực được chọn nhiều nhất">
         {areas.data && areas.data.length > 0 ? (
@@ -118,7 +135,7 @@ export default function AdminDashboard() {
       <Section title="Tân sinh viên đã đăng ký theo ngành">
         {byMajor.data && byMajor.data.length > 0 ? (
           byMajor.data.map((m) => (
-            <BarRow key={m.major} label={m.major} value={m.count} max={maxMajor} />
+            <BarRow key={m.major} label={m.major} value={m.count} max={maxMajor} wide />
           ))
         ) : (
           <p className="text-sm text-slate-400">Chưa có tân sinh viên đăng ký.</p>
@@ -164,10 +181,22 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-function BarRow({ label, value, max }: { label: string; value: number; max: number }) {
+function BarRow({
+  label,
+  value,
+  max,
+  wide,
+}: {
+  label: string;
+  value: number;
+  max: number;
+  wide?: boolean;
+}) {
   return (
     <div className="flex items-center gap-3 text-sm">
-      <span className="w-28 shrink-0 text-slate-600">{label}</span>
+      <span className={`shrink-0 text-slate-600 ${wide ? 'w-52 leading-tight' : 'w-28 truncate'}`}>
+        {label}
+      </span>
       <div className="h-3 flex-1 overflow-hidden rounded-full bg-slate-100">
         <div className="h-full bg-brand" style={{ width: `${(value / max) * 100}%` }} />
       </div>

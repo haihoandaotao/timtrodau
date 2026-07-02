@@ -35,6 +35,13 @@ export class StatsController {
     return this.service.areaDistribution();
   }
 
+  @Get('accommodations-by-area')
+  @ApiOperation({ summary: 'Số lượng phòng (đã duyệt) theo khu vực' })
+  @ApiResponse({ status: 200, description: 'Mảng area + count' })
+  accommodationsByArea() {
+    return this.service.accommodationsByArea();
+  }
+
   @Get('trusted-landlords')
   @ApiOperation({ summary: 'Chủ trọ uy tín' })
   @ApiResponse({ status: 200, description: 'Top chủ trọ uy tín (không lộ CCCD)' })

@@ -55,6 +55,17 @@ export default function ModerationPage() {
     if (reason && reason.trim()) llMutation.mutate({ userId, action: 'REJECT', reason: reason.trim() });
   };
 
+  // Cấu hình tự động duyệt bài
+  const settings = useQuery({
+    queryKey: ['admin', 'moderation-settings'],
+    queryFn: adminApi.moderationSettings,
+  });
+  const autoApproveMutation = useMutation({
+    mutationFn: (autoApprove: boolean) => adminApi.setAutoApprove(autoApprove),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'moderation-settings'] }),
+  });
+  const autoApprove = settings.data?.autoApprove ?? false;
+
   return (
     <main className="mx-auto max-w-3xl px-4 py-6">
       <div className="mb-4 flex items-center justify-between">
@@ -63,6 +74,38 @@ export default function ModerationPage() {
           ← Dashboard
         </Link>
       </div>
+
+      {/* Chế độ duyệt bài: tự động hay thủ công */}
+      <section className="mb-6 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="font-semibold text-slate-800">Chế độ duyệt bài</p>
+            <p className="text-xs text-slate-500">
+              {autoApprove
+                ? 'Tự động duyệt: bài đăng mới được công khai ngay, không cần admin xét.'
+                : 'Duyệt thủ công: bài đăng mới ở trạng thái chờ, admin nhận email và xét duyệt tại đây.'}
+            </p>
+          </div>
+          <button
+            type="button"
+            disabled={settings.isLoading || autoApproveMutation.isPending}
+            onClick={() => autoApproveMutation.mutate(!autoApprove)}
+            className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition disabled:opacity-60 ${
+              autoApprove ? 'bg-green-600' : 'bg-slate-300'
+            }`}
+            aria-label="Bật/tắt tự động duyệt"
+          >
+            <span
+              className={`inline-block h-5 w-5 transform rounded-full bg-white transition ${
+                autoApprove ? 'translate-x-6' : 'translate-x-1'
+              }`}
+            />
+          </button>
+        </div>
+        <p className="mt-2 text-xs font-medium text-slate-600">
+          Trạng thái: {autoApprove ? '✅ Tự động duyệt' : '✋ Duyệt thủ công'}
+        </p>
+      </section>
 
       {/* Duyệt chủ trọ chờ xác minh */}
       {landlords.data && landlords.data.length > 0 && (

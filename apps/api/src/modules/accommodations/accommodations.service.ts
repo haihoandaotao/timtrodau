@@ -11,6 +11,8 @@ import { AccommodationStatus, BookingStatus, UserRole, UserStatus } from '../../
 import { AuthUser } from '../../common/interfaces/jwt-payload.interface';
 import { Paginated } from '../../common/interfaces/paginated.interface';
 import { Booking } from '../bookings/entities/booking.entity';
+import { MailService } from '../mail/mail.service';
+import { SettingsService } from '../settings/settings.service';
 import { UsersService } from '../users/users.service';
 import { STORAGE_SERVICE, StorageService } from '../files/storage.interface';
 import { Accommodation } from './entities/accommodation.entity';
@@ -38,6 +40,8 @@ export class AccommodationsService {
     @InjectRepository(Area) private readonly areaRepo: Repository<Area>,
     @InjectRepository(Booking) private readonly bookingRepo: Repository<Booking>,
     private readonly usersService: UsersService,
+    private readonly settings: SettingsService,
+    private readonly mail: MailService,
     @Inject(STORAGE_SERVICE) private readonly storage: StorageService,
   ) {}
 
@@ -179,7 +183,11 @@ export class AccommodationsService {
 
   // ===================== LANDLORD =====================
 
-  /** DAL-5: tạo bài đăng → PENDING. Chỉ chủ trọ ĐÃ DUYỆT (ACTIVE) mới được đăng. */
+  /**
+   * DAL-5: tạo bài đăng. Chỉ chủ trọ ĐÃ DUYỆT (ACTIVE) mới được đăng.
+   * Nếu Admin bật "tự động duyệt" → PUBLISHED ngay; ngược lại → PENDING và
+   * gửi email báo Admin có bài chờ duyệt.
+   */
   async create(landlordId: string, dto: CreateAccommodationDto): Promise<Accommodation> {
     const landlord = await this.usersService.findById(landlordId);
     if (!landlord || landlord.role !== UserRole.LANDLORD) {
@@ -189,6 +197,7 @@ export class AccommodationsService {
       throw new ForbiddenException('Tài khoản chủ trọ chưa được duyệt');
     }
 
+    const autoApprove = await this.settings.isAutoApprove();
     const acc = this.accRepo.create({
       landlordId,
       title: dto.title,
@@ -203,10 +212,42 @@ export class AccommodationsService {
       extraCosts: dto.extraCosts ?? null,
       mapUrl: dto.mapUrl ?? null,
       isAvailable: true,
-      status: AccommodationStatus.PENDING,
+      status: autoApprove ? AccommodationStatus.PUBLISHED : AccommodationStatus.PENDING,
       amenities: await this.resolveAmenities(dto.amenityIds),
     });
-    return this.accRepo.save(acc);
+    const created = await this.accRepo.save(acc);
+
+    if (!autoApprove) {
+      await this.notifyAdminNewListing(created, landlord.fullName);
+    }
+    return created;
+  }
+
+  /** Gửi email báo Admin có bài đăng mới chờ duyệt (lỗi email không chặn nghiệp vụ). */
+  private async notifyAdminNewListing(acc: Accommodation, landlordName: string): Promise<void> {
+    const to = this.mail.adminAddress();
+    if (!to) return;
+    const price = Number(acc.price).toLocaleString('vi-VN');
+    await this.mail.send({
+      to,
+      subject: `[DAU] Bài đăng mới chờ duyệt: ${acc.title}`,
+      text:
+        `Có bài đăng mới chờ duyệt.\n\n` +
+        `Tiêu đề: ${acc.title}\n` +
+        `Chủ trọ: ${landlordName}\n` +
+        `Giá: ${price} đ/tháng\n` +
+        `Địa chỉ: ${acc.address}\n\n` +
+        `Vào trang Kiểm duyệt để duyệt/từ chối bài.`,
+      html:
+        `<h3>Có bài đăng mới chờ duyệt</h3>` +
+        `<ul>` +
+        `<li><b>Tiêu đề:</b> ${acc.title}</li>` +
+        `<li><b>Chủ trọ:</b> ${landlordName}</li>` +
+        `<li><b>Giá:</b> ${price} đ/tháng</li>` +
+        `<li><b>Địa chỉ:</b> ${acc.address}</li>` +
+        `</ul>` +
+        `<p>Vào trang <b>Kiểm duyệt</b> trong khu quản trị để xử lý.</p>`,
+    });
   }
 
   /** Danh sách bài đăng của chủ trọ hiện tại. */

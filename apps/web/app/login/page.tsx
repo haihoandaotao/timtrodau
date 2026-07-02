@@ -68,6 +68,10 @@ function useAfterLogin() {
   const router = useRouter();
   return (res: LoginResult) => {
     signIn(res.tokens.accessToken, res.user, res.tokens.refreshToken);
+    if (res.user.mustChangePassword) {
+      router.push('/profile');
+      return;
+    }
     router.push(res.user.role === 'ADMIN' ? '/admin' : '/search');
   };
 }
@@ -146,6 +150,7 @@ function StaffForm() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [forgot, setForgot] = useState(false);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -160,18 +165,59 @@ function StaffForm() {
     }
   };
 
+  if (forgot) return <ForgotPasswordForm onBack={() => setForgot(false)} />;
+
   return (
     <form onSubmit={submit} className="space-y-3">
       <Input label="Email hoặc số điện thoại" value={identifier} onChange={setIdentifier} placeholder="email@gmail.com / 0905xxxxxx" />
       <Input label="Mật khẩu" value={password} onChange={setPassword} type="password" />
       {error && <ErrorText>{error}</ErrorText>}
       <Submit loading={loading}>Đăng nhập</Submit>
-      <p className="text-center text-sm text-slate-500">
-        Là chủ trọ mới?{' '}
+      <div className="flex items-center justify-between text-sm">
+        <button type="button" onClick={() => setForgot(true)} className="font-medium text-brand hover:underline">
+          Quên mật khẩu?
+        </button>
         <Link href="/register/landlord" className="font-medium text-brand hover:underline">
           Đăng ký cho thuê
         </Link>
+      </div>
+    </form>
+  );
+}
+
+function ForgotPasswordForm({ onBack }: { onBack: () => void }) {
+  const [email, setEmail] = useState('');
+  const [msg, setMsg] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setMsg('');
+    setLoading(true);
+    try {
+      const res = await authApi.forgotPassword(email.trim());
+      setMsg(res.message);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <form onSubmit={submit} className="space-y-3">
+      <p className="text-sm text-slate-500">
+        Nhập email đã đăng ký. Hệ thống sẽ gửi <b>mật khẩu tạm</b> vào email của bạn; hãy đổi mật khẩu ngay sau khi đăng nhập.
       </p>
+      <Input label="Email đã đăng ký" value={email} onChange={setEmail} type="email" placeholder="email@gmail.com" />
+      {error && <ErrorText>{error}</ErrorText>}
+      {msg && <p className="rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">{msg}</p>}
+      <Submit loading={loading}>Gửi mật khẩu tạm</Submit>
+      <button type="button" onClick={onBack} className="w-full text-center text-sm text-slate-500 hover:text-brand">
+        ← Quay lại đăng nhập
+      </button>
     </form>
   );
 }

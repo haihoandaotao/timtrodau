@@ -29,12 +29,24 @@ export class AdmissionController {
   }
 
   @Get('candidates')
-  @ApiOperation({ summary: 'Danh sách Tân sinh viên dự kiến (phân trang + tìm kiếm)' })
+  @ApiOperation({ summary: 'Danh sách Tân sinh viên dự kiến (phân trang + lọc)' })
   @ApiQuery({ name: 'q', required: false })
+  @ApiQuery({ name: 'major', required: false })
+  @ApiQuery({ name: 'source', required: false, enum: ['official', 'self'] })
   @ApiQuery({ name: 'page', required: false })
   @ApiResponse({ status: 200, description: 'Danh sách phân trang' })
-  candidates(@Query('q') q?: string, @Query('page') page?: string) {
-    return this.service.listCandidates({ q, page: page ? Number(page) : undefined });
+  candidates(
+    @Query('q') q?: string,
+    @Query('major') major?: string,
+    @Query('source') source?: string,
+    @Query('page') page?: string,
+  ) {
+    return this.service.listCandidates({
+      q,
+      major,
+      source,
+      page: page ? Number(page) : undefined,
+    });
   }
 
   @Get('candidate-stats')

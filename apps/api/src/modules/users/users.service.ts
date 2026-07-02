@@ -1,9 +1,10 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, FindOptionsWhere, Repository } from 'typeorm';
-import { UserRole, UserStatus } from '../../common/enums';
+import { UserRole, UserStatus, VerifyStatus } from '../../common/enums';
 import { Paginated } from '../../common/interfaces/paginated.interface';
 import { User } from './entities/user.entity';
+import { LandlordProfile } from './entities/landlord-profile.entity';
 import { StudentProfile } from './entities/student-profile.entity';
 
 export interface SafeUserListItem {
@@ -17,14 +18,97 @@ export interface SafeUserListItem {
   createdAt: Date;
 }
 
+export interface LandlordStatsSummary {
+  total: number;
+  approved: number;
+  pending: number;
+  rejected: number;
+}
+
+export interface LandlordDetail {
+  userId: string;
+  fullName: string;
+  email: string | null;
+  phone: string | null;
+  status: UserStatus;
+  createdAt: Date;
+  verifyStatus: VerifyStatus | null;
+  isTrusted: boolean;
+  idCardNo: string | null;
+  idCardImageUrl: string | null;
+  address: string | null;
+  representativeName: string | null;
+  representativePhotoUrl: string | null;
+}
+
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(User) private readonly userRepo: Repository<User>,
     @InjectRepository(StudentProfile)
     private readonly studentRepo: Repository<StudentProfile>,
+    @InjectRepository(LandlordProfile)
+    private readonly landlordRepo: Repository<LandlordProfile>,
     private readonly dataSource: DataSource,
   ) {}
+
+  // ---------- Chủ trọ (Admin) ----------
+
+  /** Thống kê số lượng chủ trọ theo trạng thái xác minh. */
+  async landlordStats(): Promise<LandlordStatsSummary> {
+    const [total, approved, pending, rejected] = await Promise.all([
+      this.userRepo.count({ where: { role: UserRole.LANDLORD } }),
+      this.landlordRepo.count({ where: { verifyStatus: VerifyStatus.APPROVED } }),
+      this.landlordRepo.count({ where: { verifyStatus: VerifyStatus.PENDING } }),
+      this.landlordRepo.count({ where: { verifyStatus: VerifyStatus.REJECTED } }),
+    ]);
+    return { total, approved, pending, rejected };
+  }
+
+  /** Admin xem hồ sơ chi tiết 1 chủ trọ (kể cả CCCD). */
+  async landlordDetail(userId: string): Promise<LandlordDetail> {
+    const user = await this.userRepo.findOne({ where: { id: userId, role: UserRole.LANDLORD } });
+    if (!user) {
+      throw new NotFoundException('Không tìm thấy chủ trọ');
+    }
+    const profile = await this.landlordRepo.findOne({ where: { userId } });
+    return {
+      userId: user.id,
+      fullName: user.fullName,
+      email: user.email,
+      phone: user.phone,
+      status: user.status,
+      createdAt: user.createdAt,
+      verifyStatus: profile?.verifyStatus ?? null,
+      isTrusted: profile?.isTrusted ?? false,
+      idCardNo: profile?.idCardNo ?? null,
+      idCardImageUrl: profile?.idCardImageUrl ?? null,
+      address: profile?.address ?? null,
+      representativeName: profile?.representativeName ?? null,
+      representativePhotoUrl: profile?.representativePhotoUrl ?? null,
+    };
+  }
+
+  /**
+   * Duyệt (approve=true) hoặc Hủy duyệt (approve=false) chủ trọ.
+   * - Duyệt: verify_status = APPROVED, user ACTIVE (được đăng tin).
+   * - Hủy duyệt: verify_status = PENDING, user PENDING (không đăng tin được).
+   */
+  async setLandlordApproval(userId: string, approve: boolean): Promise<LandlordDetail> {
+    const user = await this.userRepo.findOne({ where: { id: userId, role: UserRole.LANDLORD } });
+    if (!user) {
+      throw new NotFoundException('Không tìm thấy chủ trọ');
+    }
+    let profile = await this.landlordRepo.findOne({ where: { userId } });
+    if (!profile) {
+      profile = this.landlordRepo.create({ userId });
+    }
+    profile.verifyStatus = approve ? VerifyStatus.APPROVED : VerifyStatus.PENDING;
+    user.status = approve ? UserStatus.ACTIVE : UserStatus.PENDING;
+    await this.landlordRepo.save(profile);
+    await this.userRepo.save(user);
+    return this.landlordDetail(userId);
+  }
 
   /**
    * Admin: xoá tài khoản người dùng + dọn dữ liệu liên quan (transaction).

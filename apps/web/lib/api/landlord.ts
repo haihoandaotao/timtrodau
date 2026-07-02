@@ -75,7 +75,7 @@ export const landlordApi = {
     }),
 
   /** Upload nhiều ảnh (multipart). Không set Content-Type để browser tự đặt boundary. */
-  uploadImages: async (id: string, files: FileList) => {
+  uploadImages: async (id: string, files: FileList | File[]) => {
     const fd = new FormData();
     Array.from(files).forEach((f) => fd.append('files', f));
     const res = await fetch(`${API_BASE_URL}/accommodations/${id}/images`, {

@@ -15,8 +15,10 @@
     "typeorm": "typeorm-ts-node-commonjs -d src/config/data-source.ts",
     "migration:generate": "npm run typeorm -- migration:generate",
     "migration:run": "npm run typeorm -- migration:run",
+    "migration:run:prod": "typeorm migration:run -d dist/config/data-source.js",
     "migration:revert": "npm run typeorm -- migration:revert",
     "seed": "ts-node src/database/seeds/run-seeds.ts",
+    "seed:prod": "node dist/database/seeds/run-seeds.js",
     "import:students": "ts-node src/database/scripts/import-students.ts"
   },
   "dependencies": {
@@ -26,6 +28,7 @@
     "@nestjs/jwt": "^10.2.0",
     "@nestjs/passport": "^10.0.3",
     "@nestjs/platform-express": "^10.4.4",
+    "@nestjs/schedule": "^4.1.2",
     "@nestjs/serve-static": "^4.0.2",
     "@nestjs/swagger": "^7.4.2",
     "@nestjs/throttler": "^5.2.0",
@@ -36,10 +39,12 @@
     "dotenv": "^16.4.5",
     "helmet": "^7.2.0",
     "mysql2": "^3.11.3",
+    "nodemailer": "^9.0.1",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
+    "sharp": "^0.35.2",
     "typeorm": "^0.3.20"
   },
   "devDependencies": {
@@ -50,6 +55,7 @@
     "@types/express": "^4.17.21",
     "@types/jest": "^29.5.13",
     "@types/node": "^20.16.10",
+    "@types/nodemailer": "^8.0.1",
     "@types/passport-jwt": "^4.0.1",
     "@types/supertest": "^6.0.2",
     "@typescript-eslint/eslint-plugin": "^7.18.0",

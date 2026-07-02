@@ -55,8 +55,14 @@ export class AdmissionApiService {
     return { configured: this.isConfigured(), syncedCount };
   }
 
-  /** Danh sách Tân sinh viên dự kiến (admission_candidates) — phân trang + tìm kiếm. */
-  async listCandidates(params: { q?: string; page?: number; limit?: number }) {
+  /** Danh sách Tân sinh viên dự kiến (admission_candidates) — phân trang + lọc. */
+  async listCandidates(params: {
+    q?: string;
+    major?: string;
+    source?: string;
+    page?: number;
+    limit?: number;
+  }) {
     const page = Math.max(1, Number(params.page) || 1);
     const limit = Math.min(100, Math.max(1, Number(params.limit) || 20));
     const qb = this.repo.createQueryBuilder('c');
@@ -65,6 +71,20 @@ export class AdmissionApiService {
         '(c.full_name LIKE :q OR c.email LIKE :q OR c.phone LIKE :q OR c.candidate_code LIKE :q)',
         { q: `%${params.q.trim()}%` },
       );
+    }
+    // Lọc theo ngành dự kiến ('Chưa rõ' = chưa có ngành).
+    if (params.major?.trim()) {
+      if (params.major === 'Chưa rõ') {
+        qb.andWhere('c.intended_major IS NULL');
+      } else {
+        qb.andWhere('c.intended_major = :major', { major: params.major });
+      }
+    }
+    // Lọc theo nguồn: official = từ tuyển sinh, self = tự đăng ký.
+    if (params.source === 'official') {
+      qb.andWhere('c.is_self_registered = :sr', { sr: false });
+    } else if (params.source === 'self') {
+      qb.andWhere('c.is_self_registered = :sr', { sr: true });
     }
     qb.orderBy('c.id', 'DESC')
       .skip((page - 1) * limit)

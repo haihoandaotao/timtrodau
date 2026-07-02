@@ -15,6 +15,11 @@ export default function ProfilePage() {
   return (
     <main className="mx-auto max-w-md px-4 py-6">
       <h1 className="mb-4 text-2xl font-extrabold text-slate-800">Hồ sơ cá nhân</h1>
+      {user.mustChangePassword && (
+        <div className="mb-4 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-700">
+          ⚠️ Bạn đang dùng <b>mật khẩu tạm</b>. Vui lòng đổi mật khẩu mới ngay bên dưới để bảo đảm an toàn.
+        </div>
+      )}
       <ProfileForm onUpdated={setUser} />
       {user.role !== 'STUDENT' && <PasswordForm />}
     </main>

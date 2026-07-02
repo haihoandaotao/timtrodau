@@ -34,6 +34,8 @@ export const adminApi = {
     apiFetch<Bucket[]>('/admin/stats/price-distribution', { headers: authHeaders() }),
   areaDistribution: () =>
     apiFetch<AreaCount[]>('/admin/stats/area-distribution', { headers: authHeaders() }),
+  accommodationsByArea: () =>
+    apiFetch<AreaCount[]>('/admin/stats/accommodations-by-area', { headers: authHeaders() }),
   trustedLandlords: () =>
     apiFetch<TrustedLandlord[]>('/admin/stats/trusted-landlords', { headers: authHeaders() }),
   prospectiveByMajor: () =>
@@ -59,6 +61,16 @@ export const adminApi = {
       body: JSON.stringify({ action, reason, isTrusted }),
     }),
 
+  // Settings (cấu hình kiểm duyệt)
+  moderationSettings: () =>
+    apiFetch<{ autoApprove: boolean }>('/admin/settings/moderation', { headers: authHeaders() }),
+  setAutoApprove: (autoApprove: boolean) =>
+    apiFetch<{ autoApprove: boolean }>('/admin/settings/moderation', {
+      method: 'PATCH',
+      headers: authHeaders(),
+      body: JSON.stringify({ autoApprove }),
+    }),
+
   // Users (quản lý người dùng)
   users: (role?: string, page = 1) =>
     apiFetch<Paginated<AdminUser>>(
@@ -75,6 +87,18 @@ export const adminApi = {
     apiFetch<{ deleted: boolean }>(`/admin/users/${id}`, {
       method: 'DELETE',
       headers: authHeaders(),
+    }),
+
+  // Chủ trọ (duyệt/hủy duyệt + hồ sơ chi tiết + thống kê)
+  landlordStats: () =>
+    apiFetch<LandlordStatsSummary>('/admin/users/landlords/stats', { headers: authHeaders() }),
+  landlordDetail: (id: string) =>
+    apiFetch<LandlordDetail>(`/admin/users/${id}/landlord`, { headers: authHeaders() }),
+  setLandlordApproval: (id: string, approve: boolean) =>
+    apiFetch<LandlordDetail>(`/admin/users/${id}/landlord-approval`, {
+      method: 'PATCH',
+      headers: authHeaders(),
+      body: JSON.stringify({ approve }),
     }),
 
   // Bookings (DAL-14)
@@ -124,9 +148,11 @@ export const adminApi = {
   studentStats: () => apiFetch<StudentStatsData>('/admin/students/stats', { headers: authHeaders() }),
 
   // Tân sinh viên dự kiến (admission_candidates)
-  admissionCandidates: (params: { q?: string; page?: number }) => {
+  admissionCandidates: (params: { q?: string; major?: string; source?: string; page?: number }) => {
     const qs = new URLSearchParams();
     if (params.q) qs.set('q', params.q);
+    if (params.major) qs.set('major', params.major);
+    if (params.source) qs.set('source', params.source);
     qs.set('page', String(params.page ?? 1));
     return apiFetch<Paginated<CandidateRow>>(`/admin/admission/candidates?${qs.toString()}`, {
       headers: authHeaders(),
@@ -211,4 +237,25 @@ export interface PendingLandlord {
   address: string;
   verifyStatus: string;
   user?: { fullName: string; phone: string | null };
+}
+export interface LandlordStatsSummary {
+  total: number;
+  approved: number;
+  pending: number;
+  rejected: number;
+}
+export interface LandlordDetail {
+  userId: string;
+  fullName: string;
+  email: string | null;
+  phone: string | null;
+  status: 'ACTIVE' | 'PENDING' | 'BLOCKED';
+  createdAt: string;
+  verifyStatus: 'PENDING' | 'APPROVED' | 'REJECTED' | null;
+  isTrusted: boolean;
+  idCardNo: string | null;
+  idCardImageUrl: string | null;
+  address: string | null;
+  representativeName: string | null;
+  representativePhotoUrl: string | null;
 }

@@ -14,15 +14,28 @@ describe('RoommateService', () => {
     find: jest.fn(),
     findOne: jest.fn(),
   };
+  const imageRepo = {
+    create: jest.fn(),
+    save: jest.fn(),
+    count: jest.fn(),
+    findOne: jest.fn(),
+    delete: jest.fn(),
+  };
+  const storage = { save: jest.fn() };
 
   beforeEach(() => {
     jest.clearAllMocks();
-    service = new RoommateService(repo as never);
+    service = new RoommateService(repo as never, imageRepo as never, storage as never);
   });
 
   describe('create (DAL-12)', () => {
     it('T12-H1 (Happy): tạo tin OPEN gắn studentId + major', async () => {
-      const res = await service.create('S1', { major: 'Kiến trúc' });
+      const res = await service.create('S1', {
+        major: 'Kiến trúc',
+        address: 'Hòa Xuân',
+        contactPhone: '0905123456',
+        budget: 2000000,
+      });
       expect(res.studentId).toBe('S1'); // T12-I1
       expect(res.major).toBe('Kiến trúc');
       expect(res.status).toBe(RoommatePostStatus.OPEN);

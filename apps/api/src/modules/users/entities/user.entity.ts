@@ -25,6 +25,10 @@ export class User extends BaseEntity {
   @Column({ name: 'password_hash', type: 'varchar', length: 191, nullable: true })
   passwordHash: string | null;
 
+  // true sau khi cấp mật khẩu tạm (quên MK) → buộc đổi mật khẩu ở lần đăng nhập kế.
+  @Column({ name: 'must_change_password', type: 'boolean', default: false })
+  mustChangePassword: boolean;
+
   @Column({ type: 'enum', enum: UserRole, default: UserRole.STUDENT })
   role: UserRole;
 

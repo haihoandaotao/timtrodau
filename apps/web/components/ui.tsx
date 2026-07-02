@@ -137,10 +137,27 @@ export function Section({
   );
 }
 
-export function BarRow({ label, value, max }: { label: string; value: number; max: number }) {
+export function BarRow({
+  label,
+  value,
+  max,
+  wide,
+}: {
+  label: string;
+  value: number;
+  max: number;
+  /** Cột nhãn rộng hơn + xuống dòng (cho tên dài như tên ngành). */
+  wide?: boolean;
+}) {
   return (
     <div className="flex items-center gap-3 text-sm">
-      <span className="w-28 shrink-0 truncate text-slate-600">{label}</span>
+      <span
+        className={`shrink-0 text-slate-600 ${
+          wide ? 'w-52 whitespace-normal break-words leading-tight' : 'w-28 truncate'
+        }`}
+      >
+        {label}
+      </span>
       <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-slate-100">
         <div
           className="h-full rounded-full bg-brand-gradient"

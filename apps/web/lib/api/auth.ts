@@ -16,6 +16,7 @@ export interface AuthUser {
   studentCode: string | null;
   role: UserRole;
   status: string;
+  mustChangePassword?: boolean;
 }
 
 export interface AuthTokens {
@@ -95,6 +96,13 @@ export const authApi = {
       method: 'POST',
       headers: authHeaders(),
       body: JSON.stringify({ currentPassword, newPassword }),
+    }),
+
+  /** Quên mật khẩu: gửi mật khẩu tạm về email (chủ trọ/admin). */
+  forgotPassword: (email: string) =>
+    apiFetch<{ message: string }>('/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
     }),
 };
 

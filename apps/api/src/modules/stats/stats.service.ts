@@ -126,6 +126,21 @@ export class StatsService {
     return rows.map((r) => ({ area: r.area, count: Number(r.count) }));
   }
 
+  /** Số lượng phòng đã duyệt (PUBLISHED) theo từng khu vực. */
+  async accommodationsByArea(): Promise<Array<{ area: string; count: number }>> {
+    const rows = await this.accRepo
+      .createQueryBuilder('a')
+      .leftJoin('a.area', 'area')
+      .select('COALESCE(area.name, :unknown)', 'area')
+      .addSelect('COUNT(a.id)', 'count')
+      .where('a.status = :status', { status: AccommodationStatus.PUBLISHED })
+      .setParameter('unknown', 'Chưa phân khu vực')
+      .groupBy('area.id')
+      .orderBy('count', 'DESC')
+      .getRawMany<{ area: string; count: string }>();
+    return rows.map((r) => ({ area: r.area, count: Number(r.count) }));
+  }
+
   /** DAL-15: danh sách chủ trọ uy tín (đã duyệt) — KHÔNG trả CCCD. */
   async trustedLandlords(): Promise<
     Array<{ userId: string; fullName: string; isTrusted: boolean; verifiedBookingCount: number }>

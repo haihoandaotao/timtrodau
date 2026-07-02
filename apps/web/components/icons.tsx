@@ -43,6 +43,13 @@ const paths: Record<string, ReactNode> = {
     </>
   ),
   list: <path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01" />,
+  image: (
+    <>
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <circle cx="8.5" cy="9.5" r="1.5" />
+      <path d="m4 18 5-5 4 4 3-3 4 4" />
+    </>
+  ),
   user: (
     <>
       <circle cx="12" cy="8" r="3.5" />
