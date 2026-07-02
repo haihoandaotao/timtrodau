@@ -31,6 +31,12 @@ import { RequestOtpDto } from './dto/request-otp.dto';
 import { StudentLoginDto } from './dto/student-login.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
 
+/** Khóa tài khoản sau ngần này lần đăng nhập sai, trong ngần này thời gian. */
+const LOGIN_MAX_ATTEMPTS = 5;
+const LOGIN_LOCK_MS = 15 * 60 * 1000;
+/** OTP: số lần nhập sai tối đa trước khi vô hiệu hoá. */
+const OTP_MAX_ATTEMPTS = 5;
+
 export interface AuthTokens {
   accessToken: string;
   refreshToken: string;
@@ -248,8 +254,16 @@ export class AuthService {
     if (otp.expiresAt.getTime() < Date.now()) {
       throw new BadRequestException('Mã OTP đã hết hạn');
     }
+    if (otp.attempts >= OTP_MAX_ATTEMPTS) {
+      throw new BadRequestException('Nhập sai quá số lần cho phép. Vui lòng yêu cầu mã mới.');
+    }
     const matched = await bcrypt.compare(dto.code, otp.codeHash);
     if (!matched) {
+      otp.attempts += 1;
+      if (otp.attempts >= OTP_MAX_ATTEMPTS) {
+        otp.consumed = true; // vô hiệu hoá mã sau khi vượt ngưỡng
+      }
+      await this.otpRepo.save(otp);
       throw new BadRequestException('Mã OTP không đúng');
     }
 
@@ -298,19 +312,53 @@ export class AuthService {
 
   async login(dto: LoginDto): Promise<{ tokens: AuthTokens; user: SafeUser }> {
     const user = await this.usersService.findByIdentifier(dto.identifier);
-    if (!user || !user.passwordHash) {
+    if (!user || (!user.passwordHash && !user.tempPasswordHash)) {
       throw new UnauthorizedException('Sai email/SĐT hoặc mật khẩu');
     }
-    const matched = await bcrypt.compare(dto.password, user.passwordHash);
-    if (!matched) {
-      throw new UnauthorizedException('Sai số điện thoại hoặc mật khẩu');
+
+    // Khóa tạm sau nhiều lần sai (chống brute-force).
+    if (user.lockedUntil && user.lockedUntil.getTime() > Date.now()) {
+      throw new ForbiddenException(
+        'Tài khoản tạm khóa do đăng nhập sai nhiều lần. Vui lòng thử lại sau ít phút.',
+      );
     }
+
+    // Chấp nhận mật khẩu chính HOẶC mật khẩu tạm còn hạn (không ghi đè MK chính).
+    let matched = user.passwordHash ? await bcrypt.compare(dto.password, user.passwordHash) : false;
+    let viaTemp = false;
+    if (
+      !matched &&
+      user.tempPasswordHash &&
+      user.tempPasswordExpiresAt &&
+      user.tempPasswordExpiresAt.getTime() > Date.now()
+    ) {
+      viaTemp = await bcrypt.compare(dto.password, user.tempPasswordHash);
+      matched = viaTemp;
+    }
+
+    if (!matched) {
+      user.failedLoginAttempts = (user.failedLoginAttempts ?? 0) + 1;
+      if (user.failedLoginAttempts >= LOGIN_MAX_ATTEMPTS) {
+        user.lockedUntil = new Date(Date.now() + LOGIN_LOCK_MS);
+        user.failedLoginAttempts = 0;
+      }
+      await this.userRepo.save(user);
+      throw new UnauthorizedException('Sai email/SĐT hoặc mật khẩu');
+    }
+
     if (user.role === UserRole.STUDENT) {
       throw new ForbiddenException('Sinh viên đăng nhập bằng OTP');
     }
     if (user.status !== UserStatus.ACTIVE) {
       throw new ForbiddenException('Tài khoản chưa được kích hoạt/duyệt');
     }
+
+    // Đăng nhập thành công: reset bộ đếm; nếu dùng MK tạm thì buộc đổi.
+    user.failedLoginAttempts = 0;
+    user.lockedUntil = null;
+    if (viaTemp) user.mustChangePassword = true;
+    await this.userRepo.save(user);
+
     return { tokens: await this.buildTokens(user), user: this.sanitize(user) };
   }
 
@@ -331,9 +379,11 @@ export class AuthService {
       return generic;
     }
 
+    // Cấp mật khẩu TẠM riêng, có hạn — KHÔNG ghi đè mật khẩu chính. Nhờ vậy
+    // yêu cầu quên MK của kẻ xấu không khóa được tài khoản nạn nhân (MK cũ vẫn dùng).
     const tempPassword = this.generateTempPassword();
-    user.passwordHash = await bcrypt.hash(tempPassword, 10);
-    user.mustChangePassword = true;
+    user.tempPasswordHash = await bcrypt.hash(tempPassword, 10);
+    user.tempPasswordExpiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 giờ
     await this.userRepo.save(user);
 
     await this.mail.send({
@@ -342,15 +392,15 @@ export class AuthService {
       text:
         `Xin chào ${user.fullName},\n\n` +
         `Bạn (hoặc ai đó) vừa yêu cầu khôi phục mật khẩu.\n` +
-        `Mật khẩu tạm của bạn là: ${tempPassword}\n\n` +
-        `Vui lòng đăng nhập bằng mật khẩu tạm này và đổi mật khẩu ngay sau đó.\n` +
-        `Nếu không phải bạn yêu cầu, hãy đổi mật khẩu để bảo đảm an toàn.`,
+        `Mật khẩu tạm (hiệu lực 1 giờ) của bạn là: ${tempPassword}\n\n` +
+        `Đăng nhập bằng mật khẩu tạm này và đổi mật khẩu ngay sau đó.\n` +
+        `Mật khẩu cũ của bạn vẫn dùng được; nếu không phải bạn yêu cầu, có thể bỏ qua email này.`,
       html:
         `<p>Xin chào <b>${user.fullName}</b>,</p>` +
         `<p>Bạn (hoặc ai đó) vừa yêu cầu khôi phục mật khẩu.</p>` +
-        `<p>Mật khẩu tạm của bạn là: <b style="font-size:18px">${tempPassword}</b></p>` +
-        `<p>Vui lòng đăng nhập bằng mật khẩu tạm này và <b>đổi mật khẩu ngay</b> sau đó.</p>` +
-        `<p style="color:#888">Nếu không phải bạn yêu cầu, hãy đổi mật khẩu để bảo đảm an toàn.</p>`,
+        `<p>Mật khẩu tạm (<b>hiệu lực 1 giờ</b>): <b style="font-size:18px">${tempPassword}</b></p>` +
+        `<p>Đăng nhập bằng mật khẩu tạm rồi <b>đổi mật khẩu ngay</b>.</p>` +
+        `<p style="color:#888">Mật khẩu cũ vẫn dùng được; nếu không phải bạn yêu cầu, có thể bỏ qua email này.</p>`,
     });
     return generic;
   }
@@ -378,6 +428,9 @@ export class AuthService {
     const user = await this.userRepo.findOne({ where: { id: payload.sub } });
     if (!user) {
       throw new UnauthorizedException('Người dùng không tồn tại');
+    }
+    if (user.status !== UserStatus.ACTIVE) {
+      throw new UnauthorizedException('Tài khoản không hoạt động hoặc đã bị khóa');
     }
     return this.buildTokens(user);
   }
@@ -413,21 +466,33 @@ export class AuthService {
     return this.sanitize(await this.userRepo.save(user));
   }
 
-  /** Đổi mật khẩu (chỉ tài khoản có mật khẩu: chủ trọ/admin). */
+  /** Đổi mật khẩu (chủ trọ/admin). "Mật khẩu hiện tại" chấp nhận cả MK tạm còn hạn. */
   async changePassword(
     authUser: AuthUser,
     dto: { currentPassword: string; newPassword: string },
   ): Promise<{ success: true }> {
     const user = await this.userRepo.findOne({ where: { id: authUser.id } });
-    if (!user || !user.passwordHash) {
+    if (!user || (!user.passwordHash && !user.tempPasswordHash)) {
       throw new BadRequestException('Tài khoản này không dùng mật khẩu');
     }
-    const ok = await bcrypt.compare(dto.currentPassword, user.passwordHash);
-    if (!ok) {
+    const okReal = user.passwordHash
+      ? await bcrypt.compare(dto.currentPassword, user.passwordHash)
+      : false;
+    const okTemp =
+      !okReal &&
+      user.tempPasswordHash &&
+      user.tempPasswordExpiresAt &&
+      user.tempPasswordExpiresAt.getTime() > Date.now()
+        ? await bcrypt.compare(dto.currentPassword, user.tempPasswordHash)
+        : false;
+    if (!okReal && !okTemp) {
       throw new BadRequestException('Mật khẩu hiện tại không đúng');
     }
     user.passwordHash = await bcrypt.hash(dto.newPassword, 10);
     user.mustChangePassword = false;
+    // Xoá mật khẩu tạm sau khi đã đặt mật khẩu mới.
+    user.tempPasswordHash = null;
+    user.tempPasswordExpiresAt = null;
     await this.userRepo.save(user);
     return { success: true };
   }

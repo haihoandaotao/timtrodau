@@ -22,6 +22,29 @@ async function bootstrap() {
   const webOrigin = config.get<string>('app.webOrigin') ?? 'http://localhost:3000';
   const isProd = (config.get<string>('app.env') ?? 'development') === 'production';
 
+  // Fail-fast: không cho chạy production với JWT secret mặc định/yếu.
+  if (isProd) {
+    const weak = [
+      'change-me-access',
+      'change-me-refresh',
+      'dev-access-secret',
+      'dev-refresh-secret',
+    ];
+    const access = config.get<string>('jwt.accessSecret') ?? '';
+    const refresh = config.get<string>('jwt.refreshSecret') ?? '';
+    if (
+      weak.includes(access) ||
+      weak.includes(refresh) ||
+      access.length < 16 ||
+      refresh.length < 16
+    ) {
+      throw new Error(
+        'JWT_ACCESS_SECRET/JWT_REFRESH_SECRET chưa được cấu hình an toàn cho production ' +
+          '(không được để mặc định, tối thiểu 16 ký tự). Hãy đặt secret ngẫu nhiên mạnh trong .env.',
+      );
+    }
+  }
+
   app.setGlobalPrefix(prefix);
 
   // Validation toàn cục (class-validator) — whitelist chống dư field, transform DTO.

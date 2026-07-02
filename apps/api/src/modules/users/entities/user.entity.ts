@@ -29,6 +29,20 @@ export class User extends BaseEntity {
   @Column({ name: 'must_change_password', type: 'boolean', default: false })
   mustChangePassword: boolean;
 
+  // Mật khẩu tạm (quên MK) — KHÔNG ghi đè mật khẩu chính; có hạn dùng.
+  @Column({ name: 'temp_password_hash', type: 'varchar', length: 191, nullable: true })
+  tempPasswordHash: string | null;
+
+  @Column({ name: 'temp_password_expires_at', type: 'timestamp', nullable: true })
+  tempPasswordExpiresAt: Date | null;
+
+  // Chống brute-force đăng nhập bằng mật khẩu.
+  @Column({ name: 'failed_login_attempts', type: 'int', default: 0 })
+  failedLoginAttempts: number;
+
+  @Column({ name: 'locked_until', type: 'timestamp', nullable: true })
+  lockedUntil: Date | null;
+
   @Column({ type: 'enum', enum: UserRole, default: UserRole.STUDENT })
   role: UserRole;
 

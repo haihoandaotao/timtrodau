@@ -24,6 +24,10 @@ export class OtpRequest {
   @Column({ type: 'boolean', default: false })
   consumed: boolean;
 
+  // Số lần nhập sai — vượt ngưỡng thì vô hiệu hoá (chống brute-force mã OTP).
+  @Column({ type: 'int', default: 0 })
+  attempts: number;
+
   @CreateDateColumn({ name: 'created_at', type: 'timestamp' })
   createdAt: Date;
 }

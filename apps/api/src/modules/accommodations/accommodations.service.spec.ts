@@ -28,6 +28,8 @@ describe('AccommodationsService', () => {
   const amenityRepo = { findBy: jest.fn(async () => []), find: jest.fn(async () => []) };
   const areaRepo = { find: jest.fn(async () => []) };
   const usersService = { findById: jest.fn() };
+  const settings = { isAutoApprove: jest.fn(async () => false) };
+  const mail = { adminAddress: jest.fn(() => ''), send: jest.fn(async () => true) };
   const storage = { save: jest.fn(async () => ({ url: '/uploads/x.jpg', mediaType: 'IMAGE' })) };
 
   // QueryBuilder giả lập chuỗi method.
@@ -51,6 +53,8 @@ describe('AccommodationsService', () => {
       areaRepo as never,
       bookingRepo as never,
       usersService as never,
+      settings as never,
+      mail as never,
       storage as never,
     );
   });
