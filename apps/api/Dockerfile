@@ -15,6 +15,9 @@ COPY package.json package-lock.json ./
 COPY apps/api/package.json ./apps/api/
 RUN npm ci --omit=dev && npm cache clean --force
 COPY --from=build /app/apps/api/dist ./apps/api/dist
+COPY apps/api/docker-entrypoint.sh ./apps/api/docker-entrypoint.sh
 WORKDIR /app/apps/api
+RUN chmod +x docker-entrypoint.sh
 EXPOSE 3001
-CMD ["node", "dist/main.js"]
+# Chạy migration rồi mới start (xem docker-entrypoint.sh).
+CMD ["./docker-entrypoint.sh"]

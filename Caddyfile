@@ -1,0 +1,20 @@
+# Caddy reverse proxy — tự động cấp & gia hạn HTTPS (Let's Encrypt).
+# Domain đọc từ biến môi trường WEB_DOMAIN / API_DOMAIN (xem docker-compose.prod.yml).
+#
+# Yêu cầu: 2 domain đã trỏ A record về IP máy chủ, mở cổng 80 & 443.
+
+# Trang web cho người dùng (Next.js)
+{$WEB_DOMAIN} {
+	encode gzip
+	reverse_proxy web:3000
+}
+
+# API + ảnh upload (NestJS phục vụ /api/v1 và /uploads)
+{$API_DOMAIN} {
+	encode gzip
+	# Cho phép body lớn khi upload ảnh.
+	request_body {
+		max_size 30MB
+	}
+	reverse_proxy api:3001
+}

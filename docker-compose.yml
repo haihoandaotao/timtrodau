@@ -1,5 +1,7 @@
-# MySQL cho phát triển. Chạy: docker compose up -d
-# Sau đó cập nhật .env (DB_PASSWORD=devpass) rồi: npm run migration:run && npm run seed
+# DB phát triển (MySQL 8) — đồng nhất mọi máy, thay cho MariaDB đặt tay.
+# Dùng: npm run db:up   (hoặc: docker compose up -d --wait)
+# Rồi:  npm run db:migrate && npm run db:seed
+# Lưu ý: cổng 3306 phải trống — tắt MariaDB/MySQL cục bộ khác trước khi chạy.
 services:
   mysql:
     image: mysql:8.0

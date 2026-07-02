@@ -20,6 +20,7 @@ async function bootstrap() {
   const prefix = config.get<string>('app.prefix') ?? 'api/v1';
   const port = config.get<number>('app.port') ?? 3001;
   const webOrigin = config.get<string>('app.webOrigin') ?? 'http://localhost:3000';
+  const isProd = (config.get<string>('app.env') ?? 'development') === 'production';
 
   app.setGlobalPrefix(prefix);
 
@@ -38,19 +39,24 @@ async function bootstrap() {
 
   app.enableCors({ origin: webOrigin, credentials: true });
 
-  // Swagger / OpenAPI
-  const swaggerConfig = new DocumentBuilder()
-    .setTitle('DAU Accommodation Link API')
-    .setDescription('API hệ thống hỗ trợ tìm kiếm & đăng ký phòng trọ TSV DAU')
-    .setVersion('0.1.0')
-    .addBearerAuth()
-    .build();
-  const document = SwaggerModule.createDocument(app, swaggerConfig);
-  SwaggerModule.setup(`${prefix}/docs`, app, document);
+  // Swagger / OpenAPI — chỉ bật ngoài production để không lộ API ra công khai.
+  if (!isProd) {
+    const swaggerConfig = new DocumentBuilder()
+      .setTitle('DAU Accommodation Link API')
+      .setDescription('API hệ thống hỗ trợ tìm kiếm & đăng ký phòng trọ TSV DAU')
+      .setVersion('0.1.0')
+      .addBearerAuth()
+      .build();
+    const document = SwaggerModule.createDocument(app, swaggerConfig);
+    SwaggerModule.setup(`${prefix}/docs`, app, document);
+  }
 
   await app.listen(port);
   // eslint-disable-next-line no-console
-  console.log(`🚀 DAL API: http://localhost:${port}/${prefix}  | Swagger: /${prefix}/docs`);
+  console.log(
+    `🚀 DAL API: http://localhost:${port}/${prefix}` +
+      (isProd ? '' : `  | Swagger: /${prefix}/docs`),
+  );
 }
 
 void bootstrap();

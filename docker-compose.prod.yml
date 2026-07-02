@@ -1,0 +1,97 @@
+# ============================================================================
+# Production stack: MySQL + API (NestJS) + Web (Next.js) + Caddy (HTTPS).
+#
+# Cách dùng:
+#   1. cp .env.prod.example .env.prod   (rồi điền giá trị thật)
+#   2. docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
+#   3. Tạo admin lần đầu (1 lần duy nhất):
+#      docker compose -f docker-compose.prod.yml --env-file .env.prod exec api npm run seed:prod
+#
+# Migration tự chạy khi API khởi động (xem apps/api/docker-entrypoint.sh).
+# Chỉ Caddy mở cổng ra ngoài (80/443); API & Web chạy nội bộ trong mạng compose.
+# ============================================================================
+services:
+  mysql:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: ${DB_DATABASE}
+    volumes:
+      - dal_mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ['CMD', 'mysqladmin', 'ping', '-h', 'localhost', '-p${DB_PASSWORD}']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      API_PORT: '3001'
+      API_PREFIX: api/v1
+      WEB_ORIGIN: ${WEB_ORIGIN}
+      DB_HOST: mysql
+      DB_PORT: '3306'
+      DB_USERNAME: root
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_DATABASE: ${DB_DATABASE}
+      DB_SYNCHRONIZE: 'false'
+      DB_LOGGING: 'false'
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      JWT_ACCESS_EXPIRES: 15m
+      JWT_REFRESH_EXPIRES: 7d
+      INTEGRATION_API_BASE_URL: ${INTEGRATION_API_BASE_URL}
+      INTEGRATION_API_KEY: ${INTEGRATION_API_KEY}
+      GMAIL_USER: ${GMAIL_USER}
+      GMAIL_APP_PASSWORD: ${GMAIL_APP_PASSWORD}
+      MAIL_FROM: ${MAIL_FROM}
+      ADMIN_NOTIFY_EMAIL: ${ADMIN_NOTIFY_EMAIL}
+      UPLOAD_DIR: uploads
+      SEED_ADMIN_PHONE: ${SEED_ADMIN_PHONE}
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD}
+    volumes:
+      # Quan trọng: giữ ảnh upload qua các lần redeploy.
+      - dal_uploads:/app/apps/api/uploads
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        # URL API công khai — NHÚNG LÚC BUILD (Next.js public env).
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL}
+    restart: unless-stopped
+    depends_on:
+      - api
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '443:443'
+    environment:
+      WEB_DOMAIN: ${WEB_DOMAIN}
+      API_DOMAIN: ${API_DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - dal_caddy_data:/data
+      - dal_caddy_config:/config
+    depends_on:
+      - web
+      - api
+
+volumes:
+  dal_mysql_data:
+  dal_uploads:
+  dal_caddy_data:
+  dal_caddy_config:

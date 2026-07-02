@@ -13,7 +13,14 @@
     "build": "npm run build --workspace=apps/api && npm run build --workspace=apps/web",
     "test": "npm run test --workspace=apps/api",
     "test:e2e": "npm run test:e2e --workspace=apps/api",
-    "lint": "npm run lint --workspace=apps/api && npm run lint --workspace=apps/web"
+    "lint": "npm run lint --workspace=apps/api && npm run lint --workspace=apps/web",
+    "db:up": "docker compose up -d --wait",
+    "db:down": "docker compose down",
+    "db:logs": "docker compose logs -f mysql",
+    "db:reset": "docker compose down -v && docker compose up -d --wait",
+    "db:migrate": "npm run migration:run --workspace=apps/api",
+    "db:seed": "npm run seed --workspace=apps/api",
+    "setup": "npm install && npm run db:up && npm run db:migrate && npm run db:seed"
   },
   "engines": {
     "node": ">=18"
