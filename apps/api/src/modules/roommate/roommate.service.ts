@@ -2,6 +2,7 @@ import { ForbiddenException, Inject, Injectable, NotFoundException } from '@nest
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOptionsWhere, LessThanOrEqual, Repository } from 'typeorm';
 import { RoommatePostStatus } from '../../common/enums';
+import { Paginated } from '../../common/interfaces/paginated.interface';
 import { STORAGE_SERVICE, StorageService } from '../files/storage.interface';
 import { RoommatePost } from './entities/roommate-post.entity';
 import { RoommatePostImage } from './entities/roommate-post-image.entity';
@@ -35,8 +36,10 @@ export class RoommateService {
     return this.repo.save(post);
   }
 
-  /** DAL-12: danh sách tin OPEN, lọc theo ngành/khu vực/ngân sách. */
-  findAll(query: QueryRoommateDto): Promise<RoommatePost[]> {
+  /** DAL-12: danh sách tin OPEN, lọc theo ngành/khu vực/ngân sách, phân trang. */
+  async findAll(query: QueryRoommateDto): Promise<Paginated<RoommatePost>> {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 20;
     const where: FindOptionsWhere<RoommatePost> = { status: RoommatePostStatus.OPEN };
     if (query.major) {
       where.major = query.major;
@@ -47,11 +50,17 @@ export class RoommateService {
     if (query.budgetMax !== undefined) {
       where.budget = LessThanOrEqual(String(query.budgetMax));
     }
-    return this.repo.find({
+    const [data, total] = await this.repo.findAndCount({
       where,
       relations: { preferredArea: true, images: true },
       order: { createdAt: 'DESC' },
+      skip: (page - 1) * limit,
+      take: limit,
     });
+    return {
+      data,
+      meta: { total, page, limit, totalPages: Math.max(1, Math.ceil(total / limit)) },
+    };
   }
 
   /** Sửa/đóng tin — chỉ chủ tin. */

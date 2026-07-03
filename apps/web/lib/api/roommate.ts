@@ -41,12 +41,19 @@ export interface CreateRoommatePayload {
   description?: string;
 }
 
+export interface Paginated<T> {
+  data: T[];
+  meta: { total: number; page: number; limit: number; totalPages: number };
+}
+
 export const roommateApi = {
-  list: (filter: { major?: string; areaId?: number; budgetMax?: number } = {}) => {
+  list: (filter: { major?: string; areaId?: number; budgetMax?: number; page?: number } = {}) => {
     const p = new URLSearchParams();
     Object.entries(filter).forEach(([k, v]) => v !== undefined && v !== '' && p.append(k, String(v)));
     const qs = p.toString();
-    return apiFetch<RoommatePost[]>(`/roommates${qs ? `?${qs}` : ''}`, { headers: authHeaders() });
+    return apiFetch<Paginated<RoommatePost>>(`/roommates${qs ? `?${qs}` : ''}`, {
+      headers: authHeaders(),
+    });
   },
   create: (payload: CreateRoommatePayload) =>
     apiFetch<RoommatePost>('/roommates', {

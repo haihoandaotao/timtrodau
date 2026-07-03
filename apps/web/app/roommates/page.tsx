@@ -22,13 +22,16 @@ const GENDER_LABEL: Record<GenderPref, string> = {
 export default function RoommatesPage() {
   const { user, loading } = useAuth();
   const queryClient = useQueryClient();
+  const [page, setPage] = useState(1);
 
   const { data: areas } = useQuery({ queryKey: ['areas'], queryFn: accommodationsApi.areas });
   const list = useQuery({
-    queryKey: ['roommates'],
-    queryFn: () => roommateApi.list(),
+    queryKey: ['roommates', page],
+    queryFn: () => roommateApi.list({ page }),
     enabled: !!user,
   });
+  const posts = list.data?.data ?? [];
+  const meta = list.data?.meta;
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['roommates'] });
   const close = useMutation({ mutationFn: (id: string) => roommateApi.close(id), onSuccess: invalidate });
@@ -52,7 +55,7 @@ export default function RoommatesPage() {
 
       <div className="mt-5 space-y-3">
         {list.isLoading && <p className="text-slate-500">Đang tải…</p>}
-        {list.data?.map((p) => (
+        {posts.map((p) => (
           <Card key={p.id} className="p-4">
             <div className="flex items-start justify-between gap-2">
               <div className="flex flex-wrap items-center gap-2">
@@ -98,10 +101,36 @@ export default function RoommatesPage() {
             )}
           </Card>
         ))}
-        {list.data && list.data.length === 0 && (
+        {list.data && posts.length === 0 && (
           <p className="text-slate-500">Chưa có tin nào. Hãy đăng tin của bạn ở trên.</p>
         )}
       </div>
+
+      {meta && meta.totalPages > 1 && (
+        <div className="mt-4 flex items-center justify-between text-sm">
+          <span className="text-slate-500">
+            Trang {meta.page}/{meta.totalPages} · {meta.total} tin
+          </span>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              disabled={meta.page <= 1}
+              onClick={() => setPage((p) => p - 1)}
+              className="rounded-lg border border-slate-300 px-3 py-1.5 disabled:opacity-40"
+            >
+              ← Trước
+            </button>
+            <button
+              type="button"
+              disabled={meta.page >= meta.totalPages}
+              onClick={() => setPage((p) => p + 1)}
+              className="rounded-lg border border-slate-300 px-3 py-1.5 disabled:opacity-40"
+            >
+              Sau →
+            </button>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

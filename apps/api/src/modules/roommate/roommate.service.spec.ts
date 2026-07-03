@@ -12,6 +12,7 @@ describe('RoommateService', () => {
     create: jest.fn((x) => x),
     save: jest.fn(async (x) => ({ id: '1', ...x })),
     find: jest.fn(),
+    findAndCount: jest.fn(),
     findOne: jest.fn(),
   };
   const imageRepo = {
@@ -43,10 +44,10 @@ describe('RoommateService', () => {
   });
 
   describe('findAll (DAL-12)', () => {
-    it('T12-H1: lọc theo ngành → where.major + status OPEN', async () => {
-      repo.find.mockResolvedValue([{ id: '1', major: 'Kiến trúc' }]);
-      await service.findAll({ major: 'Kiến trúc' });
-      expect(repo.find).toHaveBeenCalledWith(
+    it('T12-H1: lọc theo ngành → where.major + status OPEN, trả phân trang', async () => {
+      repo.findAndCount.mockResolvedValue([[{ id: '1', major: 'Kiến trúc' }], 1]);
+      const res = await service.findAll({ major: 'Kiến trúc' });
+      expect(repo.findAndCount).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
             major: 'Kiến trúc',
@@ -54,6 +55,8 @@ describe('RoommateService', () => {
           }),
         }),
       );
+      expect(res.meta.total).toBe(1);
+      expect(res.data).toHaveLength(1);
     });
   });
 

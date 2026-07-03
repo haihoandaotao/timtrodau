@@ -20,4 +20,18 @@ export class QueryRoommateDto {
   @IsNumber()
   @Min(0)
   budgetMax?: number;
+
+  @ApiPropertyOptional({ description: 'Trang (mặc định 1)' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  page?: number;
+
+  @ApiPropertyOptional({ description: 'Số mục mỗi trang (mặc định 20)' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  limit?: number;
 }
