@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AccommodationStatus, UserStatus, VerifyStatus } from '../../common/enums';
 import { Accommodation } from '../accommodations/entities/accommodation.entity';
+import { MailService } from '../mail/mail.service';
 import { LandlordProfile } from '../users/entities/landlord-profile.entity';
 import { User } from '../users/entities/user.entity';
 import {
@@ -18,6 +19,7 @@ export class ModerationService {
     @InjectRepository(LandlordProfile)
     private readonly landlordRepo: Repository<LandlordProfile>,
     @InjectRepository(User) private readonly userRepo: Repository<User>,
+    private readonly mail: MailService,
   ) {}
 
   // ---------- Bài đăng ----------
@@ -36,7 +38,8 @@ export class ModerationService {
     if (!acc) {
       throw new NotFoundException('Không tìm thấy bài đăng');
     }
-    if (dto.action === ModerationAction.APPROVE) {
+    const approved = dto.action === ModerationAction.APPROVE;
+    if (approved) {
       acc.status = AccommodationStatus.PUBLISHED;
       acc.rejectReason = null;
     } else {
@@ -46,7 +49,32 @@ export class ModerationService {
       acc.status = AccommodationStatus.REJECTED;
       acc.rejectReason = dto.reason;
     }
-    return this.accRepo.save(acc);
+    const saved = await this.accRepo.save(acc);
+    await this.notifyLandlordModeration(acc.landlordId, acc.title, approved, dto.reason);
+    return saved;
+  }
+
+  /** Email báo chủ trọ kết quả duyệt bài (lỗi email không chặn nghiệp vụ). */
+  private async notifyLandlordModeration(
+    landlordId: string,
+    title: string,
+    approved: boolean,
+    reason?: string,
+  ): Promise<void> {
+    const landlord = await this.userRepo.findOne({ where: { id: landlordId } });
+    if (!landlord?.email) return;
+    const subject = approved
+      ? `[DAU] Bài đăng "${title}" đã được duyệt`
+      : `[DAU] Bài đăng "${title}" bị từ chối`;
+    const body = approved
+      ? `Bài đăng "${title}" của bạn đã được duyệt và hiển thị công khai.`
+      : `Bài đăng "${title}" của bạn chưa được duyệt.\nLý do: ${reason ?? ''}\nVui lòng chỉnh sửa và đăng lại.`;
+    await this.mail.send({
+      to: landlord.email,
+      subject,
+      text: `Chào ${landlord.fullName},\n\n${body}`,
+      html: `<p>Chào <b>${landlord.fullName}</b>,</p><p>${body.replace(/\n/g, '<br>')}</p>`,
+    });
   }
 
   // ---------- Chủ trọ ----------

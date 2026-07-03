@@ -22,6 +22,7 @@ describe('BookingsService', () => {
   const accommodationsService = { findPublicById: jest.fn() };
   const usersService = { findById: jest.fn() };
   const notifyService = { notifyNewBooking: jest.fn() };
+  const mail = { send: jest.fn(async () => true) };
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -31,6 +32,7 @@ describe('BookingsService', () => {
       accommodationsService as never,
       usersService as never,
       notifyService as never,
+      mail as never,
     );
     usersService.findById.mockImplementation(async (id: string) =>
       id === 'L1'

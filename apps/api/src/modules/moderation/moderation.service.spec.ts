@@ -12,10 +12,16 @@ describe('ModerationService', () => {
   const accRepo = { findOne: jest.fn(), find: jest.fn(), save: jest.fn(async (x) => x) };
   const landlordRepo = { findOne: jest.fn(), find: jest.fn(), save: jest.fn(async (x) => x) };
   const userRepo = { findOne: jest.fn(), save: jest.fn(async (x) => x) };
+  const mail = { send: jest.fn(async () => true) };
 
   beforeEach(() => {
     jest.clearAllMocks();
-    service = new ModerationService(accRepo as never, landlordRepo as never, userRepo as never);
+    service = new ModerationService(
+      accRepo as never,
+      landlordRepo as never,
+      userRepo as never,
+      mail as never,
+    );
   });
 
   describe('moderateAccommodation (DAL-13)', () => {

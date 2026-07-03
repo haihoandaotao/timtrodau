@@ -11,11 +11,20 @@ import { AuthUser } from '../../common/interfaces/jwt-payload.interface';
 import { Paginated } from '../../common/interfaces/paginated.interface';
 import { AccommodationsService } from '../accommodations/accommodations.service';
 import { LandlordProfile } from '../users/entities/landlord-profile.entity';
+import { MailService } from '../mail/mail.service';
 import { NotifyService } from '../notify/notify.service';
 import { UsersService } from '../users/users.service';
 import { Booking } from './entities/booking.entity';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { QueryBookingDto } from './dto/query-booking.dto';
+
+/** Nhãn tiếng Việt cho trạng thái giữ chỗ (dùng trong email thông báo). */
+const BOOKING_STATUS_LABEL: Record<BookingStatus, string> = {
+  [BookingStatus.PENDING]: 'Chờ xử lý',
+  [BookingStatus.CONTACTED]: 'Đã liên hệ',
+  [BookingStatus.SUCCESS]: 'Thành công',
+  [BookingStatus.CANCELLED]: 'Đã huỷ',
+};
 
 export interface BookingContact {
   phone: string | null;
@@ -36,6 +45,7 @@ export class BookingsService {
     private readonly accommodationsService: AccommodationsService,
     private readonly usersService: UsersService,
     private readonly notifyService: NotifyService,
+    private readonly mail: MailService,
   ) {}
 
   /**
@@ -78,6 +88,23 @@ export class BookingsService {
         accommodationTitle: acc.title,
         studentName: student?.fullName ?? 'Sinh viên',
       });
+      // Email cho chủ trọ (nếu có email) khi có lượt giữ chỗ mới.
+      if (landlord.email) {
+        await this.mail.send({
+          to: landlord.email,
+          subject: `[DAU] Có lượt giữ chỗ mới: ${acc.title}`,
+          text:
+            `Chào ${landlord.fullName},\n\n` +
+            `Sinh viên ${student?.fullName ?? ''} vừa giữ chỗ phòng "${acc.title}".\n` +
+            `SĐT sinh viên: ${student?.phone ?? 'chưa cập nhật'}\n\n` +
+            `Đăng nhập để liên hệ và cập nhật trạng thái.`,
+          html:
+            `<p>Chào <b>${landlord.fullName}</b>,</p>` +
+            `<p>Sinh viên <b>${student?.fullName ?? ''}</b> vừa giữ chỗ phòng "<b>${acc.title}</b>".</p>` +
+            `<p>SĐT sinh viên: ${student?.phone ?? 'chưa cập nhật'}</p>` +
+            `<p>Đăng nhập để liên hệ và cập nhật trạng thái.</p>`,
+        });
+      }
     }
 
     return { booking, contact: this.buildContact(landlord?.phone ?? null) };
@@ -141,6 +168,7 @@ export class BookingsService {
 
     const becameSuccess =
       status === BookingStatus.SUCCESS && booking.status !== BookingStatus.SUCCESS;
+    const changed = booking.status !== status;
     booking.status = status;
     const saved = await this.bookingRepo.save(booking);
 
@@ -150,6 +178,27 @@ export class BookingsService {
         'verifiedBookingCount',
         1,
       );
+    }
+
+    // Email báo sinh viên khi trạng thái giữ chỗ thay đổi (nếu SV có email).
+    if (changed) {
+      const student = await this.usersService.findById(booking.studentId);
+      const title = booking.accommodation?.title ?? 'phòng đã giữ chỗ';
+      if (student?.email) {
+        const label = BOOKING_STATUS_LABEL[status] ?? status;
+        await this.mail.send({
+          to: student.email,
+          subject: `[DAU] Cập nhật giữ chỗ "${title}": ${label}`,
+          text:
+            `Chào ${student.fullName},\n\n` +
+            `Trạng thái giữ chỗ phòng "${title}" của bạn đã chuyển sang: ${label}.\n\n` +
+            `Đăng nhập để xem chi tiết.`,
+          html:
+            `<p>Chào <b>${student.fullName}</b>,</p>` +
+            `<p>Trạng thái giữ chỗ phòng "<b>${title}</b>" của bạn đã chuyển sang: <b>${label}</b>.</p>` +
+            `<p>Đăng nhập để xem chi tiết.</p>`,
+        });
+      }
     }
     return saved;
   }
