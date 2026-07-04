@@ -74,6 +74,13 @@ export const authApi = {
       body: JSON.stringify({ identifier, password }),
     }),
 
+  /** Chủ trọ: đăng nhập/đăng ký bằng Google (ID token từ Google Identity Services). */
+  googleLogin: (idToken: string) =>
+    apiFetch<LoginResult>('/auth/google', {
+      method: 'POST',
+      body: JSON.stringify({ idToken }),
+    }),
+
   /** Đăng ký tài khoản chủ trọ (chờ duyệt). */
   landlordRegister: (payload: LandlordRegisterPayload) =>
     apiFetch<{ id: string; status: string }>('/auth/landlord/register', {

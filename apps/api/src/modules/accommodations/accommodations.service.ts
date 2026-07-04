@@ -196,6 +196,11 @@ export class AccommodationsService {
     if (landlord.status !== UserStatus.ACTIVE) {
       throw new ForbiddenException('Tài khoản chủ trọ chưa được duyệt');
     }
+    if (!landlord.phone) {
+      throw new ForbiddenException(
+        'Vui lòng bổ sung Số điện thoại liên hệ trong hồ sơ trước khi đăng tin',
+      );
+    }
 
     const autoApprove = await this.settings.isAutoApprove();
     const acc = this.accRepo.create({

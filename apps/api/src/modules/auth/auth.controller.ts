@@ -16,6 +16,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { AuthUser } from '../../common/interfaces/jwt-payload.interface';
 import { AuthService } from './auth.service';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { GoogleLoginDto } from './dto/google-login.dto';
 import { LandlordRegisterDto } from './dto/landlord-register.dto';
 import { LoginDto } from './dto/login.dto';
 import { ProspectiveLoginDto } from './dto/prospective-login.dto';
@@ -115,6 +116,22 @@ export class AuthController {
   @ApiResponse({ status: 409, description: 'SĐT đã tồn tại' })
   registerLandlord(@Body() dto: LandlordRegisterDto) {
     return this.authService.registerLandlord(dto);
+  }
+
+  @Public()
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @Post('google')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Chủ trọ đăng nhập/đăng ký bằng Google (một chạm)',
+    description: 'Xác minh Google ID token; tạo tài khoản LANDLORD (PENDING) nếu chưa có.',
+  })
+  @ApiResponse({ status: 200, description: 'Đăng nhập thành công' })
+  @ApiResponse({ status: 401, description: 'Token Google không hợp lệ' })
+  @ApiResponse({ status: 409, description: 'Email đã dùng cho tài khoản sinh viên' })
+  @ApiResponse({ status: 503, description: 'Chưa cấu hình Google' })
+  googleLogin(@Body() dto: GoogleLoginDto) {
+    return this.authService.googleLogin(dto.idToken);
   }
 
   @Public()

@@ -3,6 +3,7 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -10,6 +11,7 @@ import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
 import { randomBytes } from 'crypto';
+import { OAuth2Client } from 'google-auth-library';
 import { DataSource, Repository } from 'typeorm';
 import { StudentType, UserRole, UserStatus, VerifyStatus } from '../../common/enums';
 import { AuthUser, JwtPayload } from '../../common/interfaces/jwt-payload.interface';
@@ -349,8 +351,8 @@ export class AuthService {
     if (user.role === UserRole.STUDENT) {
       throw new ForbiddenException('Sinh viên đăng nhập bằng OTP');
     }
-    if (user.status !== UserStatus.ACTIVE) {
-      throw new ForbiddenException('Tài khoản chưa được kích hoạt/duyệt');
+    if (user.status === UserStatus.BLOCKED) {
+      throw new ForbiddenException('Tài khoản đã bị khóa');
     }
 
     // Đăng nhập thành công: reset bộ đếm; nếu dùng MK tạm thì buộc đổi.
@@ -359,6 +361,69 @@ export class AuthService {
     if (viaTemp) user.mustChangePassword = true;
     await this.userRepo.save(user);
 
+    return { tokens: await this.buildTokens(user), user: this.sanitize(user) };
+  }
+
+  // ---------- Chủ trọ: đăng nhập bằng Google ----------
+
+  /**
+   * Đăng nhập/đăng ký chủ trọ bằng Google. Xác minh ID token với Google,
+   * lấy email + họ tên. Nếu chưa có tài khoản → tạo LANDLORD (PENDING, không
+   * mật khẩu). Email đã có (chủ trọ/admin) → đăng nhập. Email của SV → từ chối.
+   */
+  async googleLogin(idToken: string): Promise<{ tokens: AuthTokens; user: SafeUser }> {
+    const clientId = this.config.get<string>('app.googleClientId');
+    if (!clientId) {
+      throw new ServiceUnavailableException('Chưa cấu hình đăng nhập Google (GOOGLE_CLIENT_ID)');
+    }
+    let email: string | undefined;
+    let emailVerified: boolean | undefined;
+    let fullName: string | undefined;
+    try {
+      const client = new OAuth2Client(clientId);
+      const ticket = await client.verifyIdToken({ idToken, audience: clientId });
+      const payload = ticket.getPayload();
+      email = payload?.email?.toLowerCase();
+      emailVerified = payload?.email_verified;
+      fullName = payload?.name ?? undefined;
+    } catch {
+      throw new UnauthorizedException('Xác thực Google thất bại');
+    }
+    if (!email || !emailVerified) {
+      throw new UnauthorizedException('Email Google chưa được xác minh');
+    }
+    const name = fullName ?? email.split('@')[0];
+
+    const existing = await this.usersService.findByEmail(email);
+    if (existing) {
+      if (existing.role === UserRole.STUDENT) {
+        throw new ConflictException('Email này đã dùng cho tài khoản sinh viên');
+      }
+      if (existing.status === UserStatus.BLOCKED) {
+        throw new ForbiddenException('Tài khoản đã bị khóa');
+      }
+      return { tokens: await this.buildTokens(existing), user: this.sanitize(existing) };
+    }
+
+    // Tạo chủ trọ mới: PENDING chờ Admin duyệt, không mật khẩu.
+    const user = await this.dataSource.transaction(async (manager) => {
+      const created = await manager.save(
+        manager.create(User, {
+          fullName: name,
+          email,
+          role: UserRole.LANDLORD,
+          status: UserStatus.PENDING,
+        }),
+      );
+      await manager.save(
+        manager.create(LandlordProfile, {
+          userId: created.id,
+          representativeName: name,
+          verifyStatus: VerifyStatus.PENDING,
+        }),
+      );
+      return created;
+    });
     return { tokens: await this.buildTokens(user), user: this.sanitize(user) };
   }
 
@@ -429,8 +494,8 @@ export class AuthService {
     if (!user) {
       throw new UnauthorizedException('Người dùng không tồn tại');
     }
-    if (user.status !== UserStatus.ACTIVE) {
-      throw new UnauthorizedException('Tài khoản không hoạt động hoặc đã bị khóa');
+    if (user.status === UserStatus.BLOCKED) {
+      throw new UnauthorizedException('Tài khoản đã bị khóa');
     }
     return this.buildTokens(user);
   }

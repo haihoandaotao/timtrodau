@@ -117,6 +117,7 @@ describe('AccommodationsService', () => {
         id: '5',
         role: UserRole.LANDLORD,
         status: UserStatus.ACTIVE,
+        phone: '0905123456',
       });
       const res = await service.create('5', dto);
 

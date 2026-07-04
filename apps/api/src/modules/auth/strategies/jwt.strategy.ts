@@ -25,8 +25,9 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
    */
   async validate(payload: JwtPayload): Promise<AuthUser> {
     const user = await this.usersService.findById(payload.sub);
-    if (!user || user.status !== UserStatus.ACTIVE) {
-      throw new UnauthorizedException('Tài khoản không hoạt động hoặc đã bị khóa');
+    // Chặn ngay tài khoản bị khóa (BLOCKED); PENDING vẫn vào được để hoàn thiện hồ sơ.
+    if (!user || user.status === UserStatus.BLOCKED) {
+      throw new UnauthorizedException('Tài khoản đã bị khóa');
     }
     return { id: user.id, role: user.role, phone: user.phone };
   }

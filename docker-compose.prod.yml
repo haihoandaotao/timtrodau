@@ -55,6 +55,7 @@ services:
       GMAIL_APP_PASSWORD: ${GMAIL_APP_PASSWORD}
       MAIL_FROM: ${MAIL_FROM}
       ADMIN_NOTIFY_EMAIL: ${ADMIN_NOTIFY_EMAIL}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
       UPLOAD_DIR: uploads
       SEED_ADMIN_PHONE: ${SEED_ADMIN_PHONE}
       SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD}
@@ -69,6 +70,7 @@ services:
       args:
         # URL API công khai — NHÚNG LÚC BUILD (Next.js public env).
         NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL}
+        NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${NEXT_PUBLIC_GOOGLE_CLIENT_ID}
     restart: unless-stopped
     depends_on:
       - api

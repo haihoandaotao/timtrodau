@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { authApi, type LoginResult } from '@/lib/api/auth';
 import { useAuth } from '@/lib/auth-context';
+import { GoogleLoginButton } from '@/components/GoogleLoginButton';
 import { Card } from '@/components/ui';
 
 type Persona = 'prospective' | 'student' | 'staff';
@@ -151,6 +152,7 @@ function StaffForm() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [forgot, setForgot] = useState(false);
+  const [showAdmin, setShowAdmin] = useState(false);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -168,20 +170,37 @@ function StaffForm() {
   if (forgot) return <ForgotPasswordForm onBack={() => setForgot(false)} />;
 
   return (
-    <form onSubmit={submit} className="space-y-3">
-      <Input label="Email hoặc số điện thoại" value={identifier} onChange={setIdentifier} placeholder="email@gmail.com / 0905xxxxxx" />
-      <Input label="Mật khẩu" value={password} onChange={setPassword} type="password" />
-      {error && <ErrorText>{error}</ErrorText>}
-      <Submit loading={loading}>Đăng nhập</Submit>
-      <div className="flex items-center justify-between text-sm">
-        <button type="button" onClick={() => setForgot(true)} className="font-medium text-brand hover:underline">
-          Quên mật khẩu?
-        </button>
-        <Link href="/register/landlord" className="font-medium text-brand hover:underline">
-          Đăng ký cho thuê
-        </Link>
+    <div className="space-y-4">
+      {/* Chủ trọ: đăng nhập/đăng ký một chạm bằng Google */}
+      <div className="space-y-2 text-center">
+        <p className="text-sm text-slate-600">
+          Chủ trọ đăng nhập / đăng ký nhanh bằng Google — không cần điền họ tên, mật khẩu.
+        </p>
+        <GoogleLoginButton onSuccess={afterLogin} />
+        <p className="text-xs text-slate-400">
+          Sau khi đăng nhập, hãy bổ sung số điện thoại trong hồ sơ để được duyệt và đăng tin.
+        </p>
       </div>
-    </form>
+
+      {/* Lối đăng nhập quản trị (mật khẩu) */}
+      <div className="border-t border-slate-100 pt-3 text-center">
+        {!showAdmin ? (
+          <button type="button" onClick={() => setShowAdmin(true)} className="text-sm text-slate-500 hover:text-brand">
+            Đăng nhập quản trị (mật khẩu)
+          </button>
+        ) : (
+          <form onSubmit={submit} className="space-y-3 text-left">
+            <Input label="Email hoặc số điện thoại" value={identifier} onChange={setIdentifier} placeholder="email@gmail.com / 0905xxxxxx" />
+            <Input label="Mật khẩu" value={password} onChange={setPassword} type="password" />
+            {error && <ErrorText>{error}</ErrorText>}
+            <Submit loading={loading}>Đăng nhập</Submit>
+            <button type="button" onClick={() => setForgot(true)} className="text-sm font-medium text-brand hover:underline">
+              Quên mật khẩu?
+            </button>
+          </form>
+        )}
+      </div>
+    </div>
   );
 }
 

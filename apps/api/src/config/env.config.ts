@@ -9,6 +9,8 @@ export const appConfig = registerAs('app', () => ({
   port: parseInt(process.env.API_PORT ?? '3001', 10),
   prefix: process.env.API_PREFIX ?? 'api/v1',
   webOrigin: process.env.WEB_ORIGIN ?? 'http://localhost:3000',
+  // Google OAuth Client ID — xác minh ID token khi chủ trọ đăng nhập bằng Google.
+  googleClientId: process.env.GOOGLE_CLIENT_ID ?? '',
 }));
 
 export const dbConfig = registerAs('db', () => ({
