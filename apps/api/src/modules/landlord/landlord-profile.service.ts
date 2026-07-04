@@ -44,12 +44,20 @@ export class LandlordProfileService {
     if (!user) {
       throw new NotFoundException('Không tìm thấy tài khoản');
     }
+    let userChanged = false;
     if (dto.phone && dto.phone !== user.phone) {
       const dup = await this.userRepo.findOne({ where: { phone: dto.phone, id: Not(userId) } });
       if (dup) throw new ConflictException('Số điện thoại đã được dùng');
       user.phone = dto.phone;
-      await this.userRepo.save(user);
+      userChanged = true;
     }
+    // Đồng bộ tên hiển thị của tài khoản theo "Người đại diện" vừa nhập.
+    const repName = dto.representativeName?.trim();
+    if (repName && repName !== user.fullName) {
+      user.fullName = repName;
+      userChanged = true;
+    }
+    if (userChanged) await this.userRepo.save(user);
 
     let profile = await this.profileRepo.findOne({ where: { userId } });
     if (!profile) {
@@ -82,7 +90,8 @@ export class LandlordProfileService {
   }
 
   private view(user: User, profile: LandlordProfile | null): LandlordProfileView {
-    const representativeName = profile?.representativeName ?? user.fullName;
+    // KHÔNG mặc định theo fullName — để trống cho người dùng tự nhập.
+    const representativeName = profile?.representativeName ?? null;
     const address = profile?.address ?? null;
     return {
       fullName: user.fullName,

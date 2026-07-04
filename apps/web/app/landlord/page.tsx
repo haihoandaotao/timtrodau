@@ -150,7 +150,13 @@ export default function LandlordPage() {
 
 function ProfileCard() {
   const queryClient = useQueryClient();
-  const { data } = useQuery({ queryKey: ['landlord', 'profile'], queryFn: landlordProfileApi.getMine });
+  const { user, setUser } = useAuth();
+  // Khóa cache theo user để không lẫn hồ sơ giữa các tài khoản khác nhau.
+  const { data } = useQuery({
+    queryKey: ['landlord', 'profile', user?.id],
+    queryFn: landlordProfileApi.getMine,
+    enabled: !!user,
+  });
   const [form, setForm] = useState({ representativeName: '', phone: '', address: '' });
   const [editing, setEditing] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -170,7 +176,13 @@ function ProfileCard() {
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['landlord', 'profile'] });
   const save = useMutation({
     mutationFn: () => landlordProfileApi.update(form),
-    onSuccess: () => { setMsg('Đã lưu hồ sơ.'); setEditing(false); invalidate(); },
+    onSuccess: (res) => {
+      setMsg('Đã lưu hồ sơ.');
+      setEditing(false);
+      // Cập nhật tên hiển thị ngay (TopBar/menu) theo người đại diện vừa nhập.
+      if (user && res?.fullName) setUser({ ...user, fullName: res.fullName });
+      invalidate();
+    },
   });
 
   const uploadPhoto = async (file?: File | null) => {
