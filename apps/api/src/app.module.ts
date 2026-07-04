@@ -14,7 +14,6 @@ import {
   dbConfig,
   jwtConfig,
   mailConfig,
-  otpConfig,
   storageConfig,
 } from './config/env.config';
 import { typeOrmModuleConfig } from './config/typeorm.module-config';
@@ -30,6 +29,7 @@ import { LandlordModule } from './modules/landlord/landlord.module';
 import { MailModule } from './modules/mail/mail.module';
 import { MajorsModule } from './modules/majors/majors.module';
 import { ModerationModule } from './modules/moderation/moderation.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 import { ReviewsModule } from './modules/reviews/reviews.module';
 import { RoommateModule } from './modules/roommate/roommate.module';
 import { SettingsModule } from './modules/settings/settings.module';
@@ -48,7 +48,7 @@ import { UsersModule } from './modules/users/users.module';
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: ['.env', '../../.env'],
-      load: [appConfig, dbConfig, jwtConfig, otpConfig, storageConfig, admissionConfig, mailConfig],
+      load: [appConfig, dbConfig, jwtConfig, storageConfig, admissionConfig, mailConfig],
     }),
     // Chống lạm dụng/brute-force: mặc định 120 req/phút/IP (login siết riêng).
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 120 }]),
@@ -58,6 +58,8 @@ import { UsersModule } from './modules/users/users.module';
     MailModule,
     // Cấu hình hệ thống chỉnh từ UI Admin (auto-approve…) — global.
     SettingsModule,
+    // Thông báo trong app (chuông) — global.
+    NotificationsModule,
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => typeOrmModuleConfig(config),

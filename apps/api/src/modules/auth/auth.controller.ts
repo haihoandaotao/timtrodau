@@ -17,54 +17,17 @@ import { AuthUser } from '../../common/interfaces/jwt-payload.interface';
 import { AuthService } from './auth.service';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { GoogleLoginDto } from './dto/google-login.dto';
-import { LandlordRegisterDto } from './dto/landlord-register.dto';
 import { LoginDto } from './dto/login.dto';
 import { ProspectiveLoginDto } from './dto/prospective-login.dto';
 import { ProspectiveRegisterDto } from './dto/prospective-register.dto';
 import { ChangePasswordDto, UpdateProfileDto } from './dto/update-profile.dto';
 import { RefreshDto } from './dto/refresh.dto';
-import { RequestOtpDto } from './dto/request-otp.dto';
 import { StudentLoginDto } from './dto/student-login.dto';
-import { VerifyOtpDto } from './dto/verify-otp.dto';
 
 @ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
-
-  @Public()
-  @Throttle({ default: { limit: 3, ttl: 60000 } })
-  @Post('otp/request')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({
-    summary: 'SV yêu cầu OTP đăng nhập',
-    description: 'Sinh OTP gửi tới SĐT (MVP: provider mock log ra console).',
-  })
-  @ApiResponse({ status: 200, description: 'Đã gửi OTP', schema: { example: { requestId: '12' } } })
-  @ApiResponse({ status: 400, description: 'Dữ liệu không hợp lệ' })
-  requestOtp(@Body() dto: RequestOtpDto) {
-    return this.authService.requestOtp(dto);
-  }
-
-  @Public()
-  @Throttle({ default: { limit: 5, ttl: 60000 } })
-  @Post('otp/verify')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'SV xác minh OTP → cấp JWT' })
-  @ApiResponse({
-    status: 200,
-    description: 'Đăng nhập thành công',
-    schema: {
-      example: {
-        tokens: { accessToken: 'eyJ...', refreshToken: 'eyJ...' },
-        user: { id: '1', fullName: 'SV 2024110001', role: 'STUDENT', status: 'ACTIVE' },
-      },
-    },
-  })
-  @ApiResponse({ status: 400, description: 'OTP sai/hết hạn/đã dùng' })
-  verifyOtp(@Body() dto: VerifyOtpDto) {
-    return this.authService.verifyOtp(dto);
-  }
 
   @Public()
   @Throttle({ default: { limit: 6, ttl: 60000 } })
@@ -104,18 +67,6 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'Sai MSSV/ngày sinh' })
   studentLogin(@Body() dto: StudentLoginDto) {
     return this.authService.studentLogin(dto);
-  }
-
-  @Public()
-  @Post('landlord/register')
-  @ApiOperation({
-    summary: 'Chủ trọ đăng ký (chờ Admin duyệt)',
-    description: 'Tạo tài khoản LANDLORD trạng thái PENDING kèm hồ sơ CCCD.',
-  })
-  @ApiResponse({ status: 201, description: 'Đăng ký thành công, chờ duyệt' })
-  @ApiResponse({ status: 409, description: 'SĐT đã tồn tại' })
-  registerLandlord(@Body() dto: LandlordRegisterDto) {
-    return this.authService.registerLandlord(dto);
   }
 
   @Public()

@@ -12,6 +12,7 @@ import { Paginated } from '../../common/interfaces/paginated.interface';
 import { AccommodationsService } from '../accommodations/accommodations.service';
 import { LandlordProfile } from '../users/entities/landlord-profile.entity';
 import { MailService } from '../mail/mail.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { NotifyService } from '../notify/notify.service';
 import { UsersService } from '../users/users.service';
 import { Booking } from './entities/booking.entity';
@@ -46,6 +47,7 @@ export class BookingsService {
     private readonly usersService: UsersService,
     private readonly notifyService: NotifyService,
     private readonly mail: MailService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   /**
@@ -88,6 +90,12 @@ export class BookingsService {
         accommodationTitle: acc.title,
         studentName: student?.fullName ?? 'Sinh viên',
       });
+      await this.notifications.notify(
+        landlord.id,
+        'Có lượt giữ chỗ mới',
+        `${student?.fullName ?? 'Sinh viên'} vừa giữ chỗ phòng "${acc.title}"`,
+        '/landlord',
+      );
       // Email cho chủ trọ (nếu có email) khi có lượt giữ chỗ mới.
       if (landlord.email) {
         await this.mail.send({
@@ -180,12 +188,18 @@ export class BookingsService {
       );
     }
 
-    // Email báo sinh viên khi trạng thái giữ chỗ thay đổi (nếu SV có email).
+    // Báo sinh viên khi trạng thái giữ chỗ thay đổi.
     if (changed) {
       const student = await this.usersService.findById(booking.studentId);
       const title = booking.accommodation?.title ?? 'phòng đã giữ chỗ';
+      const label = BOOKING_STATUS_LABEL[status] ?? status;
+      await this.notifications.notify(
+        booking.studentId,
+        'Cập nhật lượt giữ chỗ',
+        `Phòng "${title}" chuyển sang: ${label}`,
+        '/bookings',
+      );
       if (student?.email) {
-        const label = BOOKING_STATUS_LABEL[status] ?? status;
         await this.mail.send({
           to: student.email,
           subject: `[DAU] Cập nhật giữ chỗ "${title}": ${label}`,

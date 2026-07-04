@@ -30,12 +30,6 @@ export const jwtConfig = registerAs('jwt', () => ({
   refreshExpires: process.env.JWT_REFRESH_EXPIRES ?? '7d',
 }));
 
-export const otpConfig = registerAs('otp', () => ({
-  provider: process.env.OTP_PROVIDER ?? 'mock',
-  ttlSeconds: parseInt(process.env.OTP_TTL_SECONDS ?? '300', 10),
-  length: parseInt(process.env.OTP_LENGTH ?? '6', 10),
-}));
-
 export const admissionConfig = registerAs('admission', () => ({
   // Header x-api-key = INTEGRATION_API_KEY. Base gồm /api/v1/integration;
   // endpoint chính thức: /official/admission-candidates.

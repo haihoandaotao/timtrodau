@@ -3,6 +3,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, FindOptionsWhere, Repository } from 'typeorm';
 import { UserRole, UserStatus, VerifyStatus } from '../../common/enums';
 import { Paginated } from '../../common/interfaces/paginated.interface';
+import { MailService } from '../mail/mail.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { User } from './entities/user.entity';
 import { LandlordProfile } from './entities/landlord-profile.entity';
 import { StudentProfile } from './entities/student-profile.entity';
@@ -50,6 +52,8 @@ export class UsersService {
     @InjectRepository(LandlordProfile)
     private readonly landlordRepo: Repository<LandlordProfile>,
     private readonly dataSource: DataSource,
+    private readonly mail: MailService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   // ---------- Chủ trọ (Admin) ----------
@@ -107,6 +111,29 @@ export class UsersService {
     user.status = approve ? UserStatus.ACTIVE : UserStatus.PENDING;
     await this.landlordRepo.save(profile);
     await this.userRepo.save(user);
+
+    // Thông báo + email cho chủ trọ về thay đổi trạng thái duyệt.
+    await this.notifications.notify(
+      user.id,
+      approve ? 'Tài khoản chủ trọ đã được duyệt' : 'Tài khoản tạm dừng đăng tin',
+      approve
+        ? 'Bạn có thể đăng tin cho thuê ngay bây giờ.'
+        : 'Quản trị viên đã tạm dừng quyền đăng tin của bạn.',
+      '/landlord',
+    );
+    if (user.email) {
+      const body = approve
+        ? 'Tài khoản chủ trọ của bạn đã được duyệt. Bạn có thể đăng tin cho thuê ngay bây giờ.'
+        : 'Quản trị viên đã tạm dừng quyền đăng tin của tài khoản bạn.';
+      await this.mail.send({
+        to: user.email,
+        subject: approve
+          ? '[DAU] Tài khoản chủ trọ đã được duyệt'
+          : '[DAU] Tài khoản chủ trọ tạm dừng đăng tin',
+        text: `Chào ${user.fullName},\n\n${body}`,
+        html: `<p>Chào <b>${user.fullName}</b>,</p><p>${body}</p>`,
+      });
+    }
     return this.landlordDetail(userId);
   }
 

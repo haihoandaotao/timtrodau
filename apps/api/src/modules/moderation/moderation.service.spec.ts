@@ -13,6 +13,7 @@ describe('ModerationService', () => {
   const landlordRepo = { findOne: jest.fn(), find: jest.fn(), save: jest.fn(async (x) => x) };
   const userRepo = { findOne: jest.fn(), save: jest.fn(async (x) => x) };
   const mail = { send: jest.fn(async () => true) };
+  const notifications = { notify: jest.fn() };
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -21,6 +22,7 @@ describe('ModerationService', () => {
       landlordRepo as never,
       userRepo as never,
       mail as never,
+      notifications as never,
     );
   });
 

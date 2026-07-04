@@ -17,27 +17,20 @@ import { StudentType, UserRole, UserStatus, VerifyStatus } from '../../common/en
 import { AuthUser, JwtPayload } from '../../common/interfaces/jwt-payload.interface';
 import { AdmissionApiService } from '../admission/admission-api.service';
 import { MailService } from '../mail/mail.service';
-import { OtpService } from '../notify/otp.service';
 import { User } from '../users/entities/user.entity';
 import { LandlordProfile } from '../users/entities/landlord-profile.entity';
 import { StudentProfile } from '../users/entities/student-profile.entity';
 import { UsersService } from '../users/users.service';
 import { AdmissionCandidate } from './entities/admission-candidate.entity';
 import { StudentRecord } from './entities/student-record.entity';
-import { OtpRequest } from './entities/otp-request.entity';
-import { LandlordRegisterDto } from './dto/landlord-register.dto';
 import { LoginDto } from './dto/login.dto';
 import { ProspectiveLoginDto } from './dto/prospective-login.dto';
 import { ProspectiveRegisterDto } from './dto/prospective-register.dto';
-import { RequestOtpDto } from './dto/request-otp.dto';
 import { StudentLoginDto } from './dto/student-login.dto';
-import { VerifyOtpDto } from './dto/verify-otp.dto';
 
 /** Khóa tài khoản sau ngần này lần đăng nhập sai, trong ngần này thời gian. */
 const LOGIN_MAX_ATTEMPTS = 5;
 const LOGIN_LOCK_MS = 15 * 60 * 1000;
-/** OTP: số lần nhập sai tối đa trước khi vô hiệu hoá. */
-const OTP_MAX_ATTEMPTS = 5;
 
 export interface AuthTokens {
   accessToken: string;
@@ -58,7 +51,6 @@ export interface SafeUser {
 @Injectable()
 export class AuthService {
   constructor(
-    @InjectRepository(OtpRequest) private readonly otpRepo: Repository<OtpRequest>,
     @InjectRepository(User) private readonly userRepo: Repository<User>,
     @InjectRepository(StudentProfile)
     private readonly studentProfileRepo: Repository<StudentProfile>,
@@ -67,7 +59,6 @@ export class AuthService {
     @InjectRepository(StudentRecord)
     private readonly studentRecordRepo: Repository<StudentRecord>,
     private readonly usersService: UsersService,
-    private readonly otpService: OtpService,
     private readonly jwtService: JwtService,
     private readonly config: ConfigService,
     private readonly dataSource: DataSource,
@@ -224,93 +215,7 @@ export class AuthService {
     return user;
   }
 
-  // ---------- SV: OTP login ----------
-
-  async requestOtp(dto: RequestOtpDto): Promise<{ requestId: string }> {
-    const code = this.otpService.generateCode();
-    const codeHash = await bcrypt.hash(code, 10);
-    const expiresAt = new Date(Date.now() + this.otpService.ttlSeconds * 1000);
-
-    const saved = await this.otpRepo.save(
-      this.otpRepo.create({
-        studentCode: dto.studentCode,
-        phone: dto.phone,
-        codeHash,
-        expiresAt,
-        consumed: false,
-      }),
-    );
-
-    await this.otpService.send(dto.phone, code);
-    return { requestId: saved.id };
-  }
-
-  async verifyOtp(dto: VerifyOtpDto): Promise<{ tokens: AuthTokens; user: SafeUser }> {
-    const otp = await this.otpRepo.findOne({ where: { id: dto.requestId } });
-    if (!otp) {
-      throw new BadRequestException('Yêu cầu OTP không tồn tại');
-    }
-    if (otp.consumed) {
-      throw new BadRequestException('Mã OTP đã được sử dụng');
-    }
-    if (otp.expiresAt.getTime() < Date.now()) {
-      throw new BadRequestException('Mã OTP đã hết hạn');
-    }
-    if (otp.attempts >= OTP_MAX_ATTEMPTS) {
-      throw new BadRequestException('Nhập sai quá số lần cho phép. Vui lòng yêu cầu mã mới.');
-    }
-    const matched = await bcrypt.compare(dto.code, otp.codeHash);
-    if (!matched) {
-      otp.attempts += 1;
-      if (otp.attempts >= OTP_MAX_ATTEMPTS) {
-        otp.consumed = true; // vô hiệu hoá mã sau khi vượt ngưỡng
-      }
-      await this.otpRepo.save(otp);
-      throw new BadRequestException('Mã OTP không đúng');
-    }
-
-    otp.consumed = true;
-    await this.otpRepo.save(otp);
-
-    const user = await this.usersService.findOrCreateStudent(otp.studentCode, otp.phone);
-    return { tokens: await this.buildTokens(user), user: this.sanitize(user) };
-  }
-
-  // ---------- Chủ trọ: đăng ký + đăng nhập ----------
-
-  async registerLandlord(dto: LandlordRegisterDto): Promise<SafeUser> {
-    if (await this.usersService.findByEmail(dto.email)) {
-      throw new ConflictException('Email đã được đăng ký');
-    }
-    if (dto.phone && (await this.usersService.findByPhone(dto.phone))) {
-      throw new ConflictException('Số điện thoại đã được đăng ký');
-    }
-
-    const passwordHash = await bcrypt.hash(dto.password, 10);
-
-    const user = await this.dataSource.transaction(async (manager) => {
-      const created = await manager.save(
-        manager.create(User, {
-          fullName: dto.fullName,
-          email: dto.email,
-          phone: dto.phone ?? null,
-          passwordHash,
-          role: UserRole.LANDLORD,
-          status: UserStatus.PENDING, // chờ Admin duyệt
-        }),
-      );
-      await manager.save(
-        manager.create(LandlordProfile, {
-          userId: created.id,
-          representativeName: dto.fullName,
-          verifyStatus: VerifyStatus.PENDING,
-        }),
-      );
-      return created;
-    });
-
-    return this.sanitize(user);
-  }
+  // ---------- Chủ trọ / Admin: đăng nhập ----------
 
   async login(dto: LoginDto): Promise<{ tokens: AuthTokens; user: SafeUser }> {
     const user = await this.usersService.findByIdentifier(dto.identifier);

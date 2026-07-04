@@ -38,13 +38,6 @@ export interface ProspectiveRegisterPayload {
   enrollmentYear: number;
 }
 
-export interface LandlordRegisterPayload {
-  fullName: string;
-  email: string;
-  password: string;
-  phone?: string;
-}
-
 export const authApi = {
   /** Tân sinh viên: email hoặc SĐT + ngày sinh (mật khẩu). */
   prospectiveLogin: (identifier: string, dob: string) =>
@@ -79,13 +72,6 @@ export const authApi = {
     apiFetch<LoginResult>('/auth/google', {
       method: 'POST',
       body: JSON.stringify({ idToken }),
-    }),
-
-  /** Đăng ký tài khoản chủ trọ (chờ duyệt). */
-  landlordRegister: (payload: LandlordRegisterPayload) =>
-    apiFetch<{ id: string; status: string }>('/auth/landlord/register', {
-      method: 'POST',
-      body: JSON.stringify(payload),
     }),
 
   me: (token: string) =>

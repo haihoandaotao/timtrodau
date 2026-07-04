@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
 import { useMobileNav } from '@/lib/mobile-nav';
+import { NotificationBell } from './NotificationBell';
 
 const ROLE_LABEL: Record<string, string> = {
   STUDENT: 'SINH VIÊN',
@@ -47,12 +48,7 @@ export function TopBar({ showMenuButton = false }: { showMenuButton?: boolean })
       </div>
 
       <div className="flex items-center gap-3">
-        <button type="button" aria-label="Thông báo" className="relative rounded-full p-2 text-slate-500 hover:bg-slate-100">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-            <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-          </svg>
-        </button>
+        {!loading && user && <NotificationBell />}
         {!loading &&
           (user ? (
             <Link href="/profile" className="flex items-center gap-2.5 rounded-full py-1 pl-2 pr-1 transition hover:bg-slate-100">

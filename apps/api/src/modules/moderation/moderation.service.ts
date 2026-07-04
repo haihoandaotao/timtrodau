@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { AccommodationStatus, UserStatus, VerifyStatus } from '../../common/enums';
 import { Accommodation } from '../accommodations/entities/accommodation.entity';
 import { MailService } from '../mail/mail.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { LandlordProfile } from '../users/entities/landlord-profile.entity';
 import { User } from '../users/entities/user.entity';
 import {
@@ -20,6 +21,7 @@ export class ModerationService {
     private readonly landlordRepo: Repository<LandlordProfile>,
     @InjectRepository(User) private readonly userRepo: Repository<User>,
     private readonly mail: MailService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   // ---------- Bài đăng ----------
@@ -54,13 +56,21 @@ export class ModerationService {
     return saved;
   }
 
-  /** Email báo chủ trọ kết quả duyệt bài (lỗi email không chặn nghiệp vụ). */
+  /** Email + thông báo in-app cho chủ trọ về kết quả duyệt bài. */
   private async notifyLandlordModeration(
     landlordId: string,
     title: string,
     approved: boolean,
     reason?: string,
   ): Promise<void> {
+    await this.notifications.notify(
+      landlordId,
+      approved ? `Bài đăng đã được duyệt` : `Bài đăng bị từ chối`,
+      approved
+        ? `"${title}" đã hiển thị công khai.`
+        : `"${title}" bị từ chối. Lý do: ${reason ?? ''}`,
+      '/landlord',
+    );
     const landlord = await this.userRepo.findOne({ where: { id: landlordId } });
     if (!landlord?.email) return;
     const subject = approved
@@ -116,6 +126,36 @@ export class ModerationService {
     }
 
     await this.userRepo.save(user);
-    return this.landlordRepo.save(profile);
+    const saved = await this.landlordRepo.save(profile);
+    await this.notifyLandlordApproval(user, dto.action === ModerationAction.APPROVE, dto.reason);
+    return saved;
+  }
+
+  /** Email + thông báo in-app cho chủ trọ về kết quả duyệt tài khoản. */
+  private async notifyLandlordApproval(
+    user: User,
+    approved: boolean,
+    reason?: string,
+  ): Promise<void> {
+    await this.notifications.notify(
+      user.id,
+      approved ? 'Tài khoản chủ trọ đã được duyệt' : 'Tài khoản chủ trọ bị từ chối',
+      approved
+        ? 'Bạn có thể đăng tin cho thuê ngay bây giờ.'
+        : `Hồ sơ chưa được duyệt. Lý do: ${reason ?? ''}`,
+      '/landlord',
+    );
+    if (!user.email) return;
+    const body = approved
+      ? 'Tài khoản chủ trọ của bạn đã được duyệt. Bạn có thể đăng tin cho thuê ngay bây giờ.'
+      : `Hồ sơ chủ trọ của bạn chưa được duyệt.\nLý do: ${reason ?? ''}`;
+    await this.mail.send({
+      to: user.email,
+      subject: approved
+        ? '[DAU] Tài khoản chủ trọ đã được duyệt'
+        : '[DAU] Tài khoản chủ trọ bị từ chối',
+      text: `Chào ${user.fullName},\n\n${body}`,
+      html: `<p>Chào <b>${user.fullName}</b>,</p><p>${body.replace(/\n/g, '<br>')}</p>`,
+    });
   }
 }
