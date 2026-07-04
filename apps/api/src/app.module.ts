@@ -30,6 +30,7 @@ import { LandlordModule } from './modules/landlord/landlord.module';
 import { MailModule } from './modules/mail/mail.module';
 import { MajorsModule } from './modules/majors/majors.module';
 import { ModerationModule } from './modules/moderation/moderation.module';
+import { ReviewsModule } from './modules/reviews/reviews.module';
 import { RoommateModule } from './modules/roommate/roommate.module';
 import { SettingsModule } from './modules/settings/settings.module';
 import { StatsModule } from './modules/stats/stats.module';
@@ -85,6 +86,7 @@ import { UsersModule } from './modules/users/users.module';
     AdmissionModule,
     StudentsModule,
     BannerModule,
+    ReviewsModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

@@ -4,9 +4,21 @@ import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useState } from 'react';
 import { accommodationsApi } from '@/lib/api/accommodations';
+import { reviewsApi } from '@/lib/api/reviews';
 import { BookingButton } from '@/components/BookingButton';
 import { FavoriteButton } from '@/components/FavoriteButton';
 import { ACCOMMODATION_TYPE_LABEL, formatVnd } from '@/lib/format';
+
+/** Hiển thị số sao (đầy/nửa/rỗng) theo điểm 0..5. */
+function Stars({ value }: { value: number }) {
+  return (
+    <span className="text-amber-500" aria-label={`${value} sao`}>
+      {[1, 2, 3, 4, 5].map((i) => (
+        <span key={i}>{value >= i ? '★' : value >= i - 0.5 ? '⯨' : '☆'}</span>
+      ))}
+    </span>
+  );
+}
 
 const API_ORIGIN = (process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3001/api/v1').replace(
   /\/api\/v1$/,
@@ -25,6 +37,10 @@ export default function RoomDetailPage({ params }: { params: { id: string } }) {
   const { data: room, isLoading, isError } = useQuery({
     queryKey: ['room', params.id],
     queryFn: () => accommodationsApi.getById(params.id),
+  });
+  const reviews = useQuery({
+    queryKey: ['reviews', params.id],
+    queryFn: () => reviewsApi.byAccommodation(params.id),
   });
 
   if (isLoading) return <Centered>Đang tải…</Centered>;
@@ -107,12 +123,40 @@ export default function RoomDetailPage({ params }: { params: { id: string } }) {
       {room.landlord && (
         <section className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
           <h2 className="mb-2 text-sm font-semibold uppercase text-slate-400">Liên hệ chủ trọ</h2>
-          <p className="font-medium text-slate-800">{room.landlord.fullName}</p>
+          <div className="flex items-center justify-between gap-2">
+            <p className="font-medium text-slate-800">{room.landlord.fullName}</p>
+            {reviews.data && reviews.data.count > 0 && (
+              <span className="flex items-center gap-1 text-sm text-slate-600">
+                <Stars value={reviews.data.average} />
+                <b>{reviews.data.average}</b> ({reviews.data.count})
+              </span>
+            )}
+          </div>
           {room.landlord.phone && (
             <a href={`tel:${room.landlord.phone}`} className="text-brand hover:underline">
               📞 {room.landlord.phone}
             </a>
           )}
+        </section>
+      )}
+
+      {/* Đánh giá chủ trọ */}
+      {reviews.data && reviews.data.count > 0 && (
+        <section className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
+          <h2 className="mb-3 text-sm font-semibold uppercase text-slate-400">
+            Đánh giá chủ trọ ({reviews.data.count})
+          </h2>
+          <div className="space-y-3">
+            {reviews.data.items.map((r) => (
+              <div key={r.id} className="border-b border-slate-100 pb-3 last:border-0 last:pb-0">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-slate-700">{r.studentName}</span>
+                  <Stars value={r.rating} />
+                </div>
+                {r.comment && <p className="mt-1 text-sm text-slate-600">{r.comment}</p>}
+              </div>
+            ))}
+          </div>
         </section>
       )}
 
