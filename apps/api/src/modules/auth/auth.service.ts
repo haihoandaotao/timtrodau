@@ -23,6 +23,7 @@ import { StudentProfile } from '../users/entities/student-profile.entity';
 import { UsersService } from '../users/users.service';
 import { AdmissionCandidate } from './entities/admission-candidate.entity';
 import { StudentRecord } from './entities/student-record.entity';
+import { LoginLockout } from './entities/login-lockout.entity';
 import { LoginDto } from './dto/login.dto';
 import { ProspectiveLoginDto } from './dto/prospective-login.dto';
 import { ProspectiveRegisterDto } from './dto/prospective-register.dto';
@@ -31,6 +32,9 @@ import { StudentLoginDto } from './dto/student-login.dto';
 /** Khóa tài khoản sau ngần này lần đăng nhập sai, trong ngần này thời gian. */
 const LOGIN_MAX_ATTEMPTS = 5;
 const LOGIN_LOCK_MS = 15 * 60 * 1000;
+/** Khóa luồng đăng nhập bằng ngày sinh (theo định danh) khi sai quá nhiều lần. */
+const DOB_MAX_ATTEMPTS = 6;
+const DOB_LOCK_MS = 15 * 60 * 1000;
 
 export interface AuthTokens {
   accessToken: string;
@@ -58,6 +62,8 @@ export class AuthService {
     private readonly admissionRepo: Repository<AdmissionCandidate>,
     @InjectRepository(StudentRecord)
     private readonly studentRecordRepo: Repository<StudentRecord>,
+    @InjectRepository(LoginLockout)
+    private readonly lockoutRepo: Repository<LoginLockout>,
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
     private readonly config: ConfigService,
@@ -68,14 +74,39 @@ export class AuthService {
 
   // ---------- SV: đăng nhập theo đối tượng (mock hệ thống ngoài) ----------
 
+  /** Chặn nếu định danh đang bị khóa do sai ngày sinh quá nhiều lần. */
+  private async assertNotLocked(identifier: string): Promise<void> {
+    const row = await this.lockoutRepo.findOne({ where: { identifier } });
+    if (row?.lockedUntil && row.lockedUntil.getTime() > Date.now()) {
+      throw new ForbiddenException('Đăng nhập sai quá nhiều lần. Vui lòng thử lại sau ít phút.');
+    }
+  }
+
+  /** Ghi nhận 1 lần đăng nhập sai; vượt ngưỡng thì khóa tạm định danh. */
+  private async recordLoginFailure(identifier: string): Promise<void> {
+    let row = await this.lockoutRepo.findOne({ where: { identifier } });
+    if (!row) row = this.lockoutRepo.create({ identifier, failedAttempts: 0, lockedUntil: null });
+    row.failedAttempts += 1;
+    if (row.failedAttempts >= DOB_MAX_ATTEMPTS) {
+      row.lockedUntil = new Date(Date.now() + DOB_LOCK_MS);
+      row.failedAttempts = 0;
+    }
+    await this.lockoutRepo.save(row);
+  }
+
+  /** Xoá bộ đếm sau khi đăng nhập thành công. */
+  private async clearLoginFailure(identifier: string): Promise<void> {
+    await this.lockoutRepo.delete({ identifier });
+  }
+
   /**
    * Tân sinh viên: đăng nhập bằng email/SĐT + ngày sinh (mật khẩu).
-   * Ưu tiên DB cục bộ (đã sync/mock); nếu không có → tra cứu trực tiếp API
-   * tuyển sinh theo tham số q (khi đã cấu hình INTEGRATION_API_KEY).
+   * Ưu tiên DB cục bộ (đã sync/mock); nếu không có → tra cứu trực tiếp API tuyển sinh.
    */
   async prospectiveLogin(
     dto: ProspectiveLoginDto,
   ): Promise<{ tokens: AuthTokens; user: SafeUser }> {
+    await this.assertNotLocked(dto.identifier);
     const local = await this.admissionRepo.findOne({
       where: [{ email: dto.identifier }, { phone: dto.identifier }],
     });
@@ -104,8 +135,10 @@ export class AuthService {
     }
 
     if (!resolved || resolved.dob !== dto.dob) {
+      await this.recordLoginFailure(dto.identifier);
       throw new UnauthorizedException('Sai email/SĐT hoặc ngày sinh');
     }
+    await this.clearLoginFailure(dto.identifier);
     const user = await this.upsertStudent(
       { email: resolved.email, phone: resolved.phone },
       resolved.fullName,
@@ -151,13 +184,16 @@ export class AuthService {
 
   /** Sinh viên trường: xác thực MSSV + ngày sinh (làm mật khẩu). */
   async studentLogin(dto: StudentLoginDto): Promise<{ tokens: AuthTokens; user: SafeUser }> {
+    await this.assertNotLocked(dto.studentCode);
     const rec = await this.studentRecordRepo.findOne({
       where: { studentCode: dto.studentCode },
     });
     const recDob = rec ? String(rec.dateOfBirth).slice(0, 10) : null;
     if (!rec || recDob !== dto.dob) {
+      await this.recordLoginFailure(dto.studentCode);
       throw new UnauthorizedException('Sai mã sinh viên hoặc ngày sinh');
     }
+    await this.clearLoginFailure(dto.studentCode);
     const user = await this.upsertStudent({ studentCode: rec.studentCode }, rec.fullName, {
       studentType: StudentType.CURRENT,
       major: rec.major ?? undefined,

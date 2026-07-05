@@ -2,7 +2,7 @@
  * Unit test AuthService — mock toàn bộ phụ thuộc (KHÔNG cần MySQL).
  * Bao phủ đăng nhập/đăng ký sinh viên (tân SV + SV trường).
  */
-import { ConflictException, UnauthorizedException } from '@nestjs/common';
+import { ConflictException, ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import { StudentType, UserRole } from '../../common/enums';
 import { AuthService } from './auth.service';
 
@@ -25,6 +25,12 @@ describe('AuthService', () => {
     save: jest.fn(async (x) => ({ id: '1', ...x })),
   };
   const studentRecordRepo = { findOne: jest.fn() };
+  const lockoutRepo = {
+    findOne: jest.fn(async () => null),
+    create: jest.fn((x) => x),
+    save: jest.fn(async (x) => x),
+    delete: jest.fn(),
+  };
   const usersService = {
     findByPhone: jest.fn(),
     findByEmail: jest.fn(),
@@ -43,6 +49,7 @@ describe('AuthService', () => {
       studentProfileRepo as never,
       admissionRepo as never,
       studentRecordRepo as never,
+      lockoutRepo as never,
       usersService as never,
       jwtService as never,
       config as never,
@@ -111,6 +118,31 @@ describe('AuthService', () => {
           enrollmentYear: 2026,
         }),
       ).rejects.toBeInstanceOf(ConflictException);
+    });
+  });
+
+  describe('khóa brute-force ngày sinh', () => {
+    it('Định danh đang bị khóa → Forbidden (chưa kiểm tra ngày sinh)', async () => {
+      lockoutRepo.findOne.mockResolvedValueOnce({
+        identifier: 'x@x.vn',
+        failedAttempts: 0,
+        lockedUntil: new Date(Date.now() + 60_000),
+      } as never);
+      await expect(
+        service.prospectiveLogin({ identifier: 'x@x.vn', dob: '2007-01-01' }),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+    });
+
+    it('Sai ngày sinh → ghi nhận thất bại (recordLoginFailure)', async () => {
+      admissionRepo.findOne.mockResolvedValue({
+        email: 'a@x.vn',
+        fullName: 'A',
+        dateOfBirth: '2007-05-12',
+      });
+      await expect(
+        service.prospectiveLogin({ identifier: 'a@x.vn', dob: '2000-01-01' }),
+      ).rejects.toBeInstanceOf(UnauthorizedException);
+      expect(lockoutRepo.save).toHaveBeenCalled();
     });
   });
 

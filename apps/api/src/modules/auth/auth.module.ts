@@ -9,11 +9,12 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { AdmissionCandidate } from './entities/admission-candidate.entity';
 import { StudentRecord } from './entities/student-record.entity';
+import { LoginLockout } from './entities/login-lockout.entity';
 import { JwtStrategy } from './strategies/jwt.strategy';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([StudentProfile, AdmissionCandidate, StudentRecord]),
+    TypeOrmModule.forFeature([StudentProfile, AdmissionCandidate, StudentRecord, LoginLockout]),
     PassportModule,
     JwtModule.register({}), // secret truyền per-sign trong AuthService
     UsersModule,
