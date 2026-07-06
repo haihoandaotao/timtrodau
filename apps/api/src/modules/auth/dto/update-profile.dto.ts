@@ -17,8 +17,8 @@ export class UpdateProfileDto {
 
   @ApiPropertyOptional({ example: '0905123456' })
   @IsOptional()
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
-  @Matches(/^0\d{9}$/, { message: 'Số điện thoại không hợp lệ' })
+  @Transform(({ value }) => (typeof value === 'string' ? value.replace(/[\s.]/g, '') : value))
+  @Matches(/^\d{8,11}$/, { message: 'Số điện thoại chỉ gồm 8–11 chữ số' })
   phone?: string;
 }
 

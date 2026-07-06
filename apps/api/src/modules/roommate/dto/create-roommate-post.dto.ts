@@ -27,7 +27,7 @@ export class CreateRoommatePostDto {
 
   @ApiProperty({ example: '0905123456', description: 'SĐT liên hệ' })
   @IsString()
-  @Matches(/^0\d{9}$/, { message: 'Số điện thoại không hợp lệ' })
+  @Matches(/^\d{8,11}$/, { message: 'Số điện thoại chỉ gồm 8–11 chữ số' })
   contactPhone: string;
 
   @ApiProperty({ example: 1500000, description: 'Tiền phòng / tháng (VND)' })

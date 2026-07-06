@@ -161,6 +161,7 @@ function ProfileCard() {
   const [editing, setEditing] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [msg, setMsg] = useState('');
+  const [error, setError] = useState('');
 
   // Đồng bộ form khi tải xong (1 lần).
   if (data && !editing && form.representativeName === '' && form.phone === '' && form.address === '') {
@@ -177,11 +178,16 @@ function ProfileCard() {
   const save = useMutation({
     mutationFn: () => landlordProfileApi.update(form),
     onSuccess: (res) => {
+      setError('');
       setMsg('Đã lưu hồ sơ.');
       setEditing(false);
       // Cập nhật tên hiển thị ngay (TopBar/menu) theo người đại diện vừa nhập.
       if (user && res?.fullName) setUser({ ...user, fullName: res.fullName });
       invalidate();
+    },
+    onError: (e) => {
+      setMsg('');
+      setError((e as Error).message || 'Lưu hồ sơ thất bại.');
     },
   });
 
@@ -245,6 +251,7 @@ function ProfileCard() {
         {msg && <span className="text-sm text-green-700">{msg}</span>}
         {data?.email && <span className="ml-auto text-xs text-slate-400">{data.email}</span>}
       </div>
+      {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
     </Card>
   );
 }
