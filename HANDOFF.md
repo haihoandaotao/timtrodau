@@ -54,6 +54,34 @@ Tất cả đã được đóng gói sẵn; dev chỉ cần làm theo [DEPLOY.md
 
 ---
 
+## PHẦN C — Quy trình CẬP NHẬT sau khi hệ thống đã chạy
+
+Mỗi khi có tính năng mới / sửa lỗi, quy trình rất gọn:
+
+```
+Dev sửa code → test → đẩy lên nhánh "main" trên GitHub → trên máy chủ chạy 2 lệnh
+```
+
+**Dev chạy trên máy chủ (1–3 phút):**
+```bash
+git pull origin main
+docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
+```
+
+Tự động & được giữ nguyên khi cập nhật:
+- ✅ Cập nhật cơ sở dữ liệu (migration) **tự chạy**.
+- ✅ **Dữ liệu + ảnh upload giữ nguyên** (không mất khi redeploy).
+- ✅ HTTPS, tên miền, cấu hình `.env.prod` giữ nguyên.
+
+Thực hành tốt (yêu cầu dev tuân thủ):
+1. **Backup DB trước mỗi lần cập nhật lớn** (lệnh trong [DEPLOY.md](DEPLOY.md)).
+2. Test kỹ trên máy dev trước khi đẩy lên `main`.
+3. Nếu bản mới lỗi → **quay lui (rollback)** về commit cũ (hướng dẫn trong DEPLOY.md).
+
+> Nhánh **`main`** là "bản chạy thật" (production). Chỉ code đã kiểm thử mới được đưa vào `main`.
+
+---
+
 ## Ước tính chi phí vận hành
 - Tên miền: ~300–700k/năm.
 - VPS: ~120–200k/tháng (trong nước) hoặc ~5–6 USD/tháng (quốc tế).

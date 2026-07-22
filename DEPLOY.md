@@ -66,29 +66,64 @@ Sau đó đăng nhập bằng `SEED_ADMIN_PHONE` / `SEED_ADMIN_PASSWORD` rồi *
 
 ---
 
-## Vận hành
+## Quy trình CẬP NHẬT phiên bản (mỗi lần có code mới)
 
-**Cập nhật phiên bản mới:**
+Nguồn code chuẩn cho production là nhánh **`main`** trên GitHub. Quy trình:
+
+**Bước 1 — Dev đẩy code mới lên `main`** (làm trên máy dev, không phải máy chủ):
 ```bash
-git pull
+# đã test xong, gộp/đưa code vào nhánh main rồi:
+git push origin main
+```
+
+**Bước 2 — Trên MÁY CHỦ, backup DB trước khi cập nhật (an toàn):**
+```bash
+docker compose -f docker-compose.prod.yml --env-file .env.prod exec mysql \
+  sh -c 'exec mysqldump -uroot -p"$MYSQL_ROOT_PASSWORD" dau_accommodation' > backup-$(date +%F).sql
+```
+
+**Bước 3 — Kéo code mới + cập nhật (migration tự chạy):**
+```bash
+git pull origin main
 docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
 ```
-Migration mới (nếu có) tự chạy khi API khởi động lại.
+Gián đoạn chỉ vài giây–vài phút; dữ liệu và ảnh upload được giữ nguyên.
 
-**Xem log:**
+**Bước 4 — Kiểm tra:** mở lại trang web, xem log không lỗi:
 ```bash
 docker compose -f docker-compose.prod.yml logs -f api
 ```
 
-**Sao lưu / phục hồi database:**
+**Nếu bản mới lỗi — quay lui (rollback):**
+```bash
+git log --oneline -5              # tìm mã commit tốt trước đó
+git checkout <mã-commit-cũ>
+docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
+# (nếu bản mới đã đổi cấu trúc DB gây lỗi) khôi phục backup ở Bước 2:
+docker compose -f docker-compose.prod.yml --env-file .env.prod exec -T mysql \
+  sh -c 'exec mysql -uroot -p"$MYSQL_ROOT_PASSWORD" dau_accommodation' < backup-YYYY-MM-DD.sql
+```
+
+## Vận hành khác
+
+**Xem log / khởi động lại:**
+```bash
+docker compose -f docker-compose.prod.yml logs -f api      # xem log
+docker compose -f docker-compose.prod.yml restart api      # khởi động lại API
+```
+
+**Sao lưu / phục hồi database thủ công:**
 ```bash
 # Backup
-docker compose -f docker-compose.prod.yml exec mysql \
-  mysqldump -uroot -p"$DB_PASSWORD" dau_accommodation > backup.sql
+docker compose -f docker-compose.prod.yml --env-file .env.prod exec mysql \
+  sh -c 'exec mysqldump -uroot -p"$MYSQL_ROOT_PASSWORD" dau_accommodation' > backup.sql
 # Restore
-docker compose -f docker-compose.prod.yml exec -T mysql \
-  mysql -uroot -p"$DB_PASSWORD" dau_accommodation < backup.sql
+docker compose -f docker-compose.prod.yml --env-file .env.prod exec -T mysql \
+  sh -c 'exec mysql -uroot -p"$MYSQL_ROOT_PASSWORD" dau_accommodation' < backup.sql
 ```
+> Khuyến nghị: đặt lịch backup tự động hằng ngày (cron trên máy chủ) và giữ backup ở nơi khác.
+
+**Tự động deploy (tùy chọn nâng cao):** có thể cài GitHub Actions để mỗi lần đẩy lên `main` thì máy chủ tự `git pull` + build lại — bỏ thao tác tay ở Bước 3. Chưa bắt buộc với quy mô hiện tại.
 
 ## Dữ liệu được giữ qua redeploy (named volumes)
 
